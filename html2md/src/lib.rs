@@ -1,6 +1,7 @@
 use proxy_wasm::traits::*;
 use proxy_wasm::types::*;
 use std::str;
+use html2md::rewrite_html;
 
 proxy_wasm::main! {{
     proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> { Box::new(HttpBodyRoot) });
@@ -62,7 +63,7 @@ impl HttpContext for HttpBody {
                         Ok(s) => s,
                         Err(e) => {
                             println!("cannot convert path to string {}", e);
-                            self.send_http_response(INVALID, vec![], Some(b"Origin response is not valid UTF-8"));
+                            self.send_http_response(INVALID, vec![], Some(b"Request path is not valid UTF-8"));
                             return Action::Pause;
                         }
                     },
@@ -76,7 +77,7 @@ impl HttpContext for HttpBody {
                 self.set_property(vec!["response.md"], Some(b"true"));
             }
         }
-        // use Accept for cache key
+        // use Convert for cache key
         self.add_http_response_header("Vary", CONVERT_FLAG);
         Action::Continue
     }
@@ -96,7 +97,7 @@ impl HttpContext for HttpBody {
                 Ok(s) => s,
                 Err(e) => {
                     println!("cannot convert path to string {}", e);
-                    self.send_http_response(INVALID, vec![], Some(b"Origin response is not valid UTF-8"));
+                    self.send_http_response(INVALID, vec![], Some(b"Request path is not valid UTF-8"));
                     return Action::Pause;
                 }
             },
@@ -112,7 +113,7 @@ impl HttpContext for HttpBody {
                     return Action::Pause;
                 }
             };
-            let md = html2md::rewrite_html(body_str, true);
+            let md = rewrite_html(body_str, true);
             self.set_http_response_body(0, body_size, md.as_bytes());
             println!("Converted HTML to Markdown: {}", path);
         } else {
@@ -123,7 +124,16 @@ impl HttpContext for HttpBody {
     }
 }
 
-fn content_type_match(ct: &str, expected: &str) -> bool
-{
-    ct.split(';').next().map(|s| s.trim()) == Some(expected)
+fn content_type_match(header_value: &str, expected: &str) -> bool {
+    let expected = expected.to_ascii_lowercase();
+
+    // Accept header can be a comma-separated list
+    for item in header_value.split(',') {
+        // Remove parameters (after ';'), trim, and lowercase
+        let mime = item.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
+        if mime == expected {
+            return true;
+        }
+    }
+    false
 }
