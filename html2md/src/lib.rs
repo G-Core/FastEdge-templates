@@ -1,7 +1,7 @@
 use proxy_wasm::traits::*;
 use proxy_wasm::types::*;
 use std::str;
-use html2md::rewrite_html;
+use htmd::HtmlToMarkdown;
 use htmlize::unescape;
 
 proxy_wasm::main! {{
@@ -94,14 +94,10 @@ impl HttpContext for HttpBody {
         }
 
         let path = match self.get_property(vec!["request.path"]) {
-            Some(p) => match std::string::String::from_utf8(p) {
-                Ok(s) => s,
-                Err(e) => {
-                    println!("cannot convert path to string {}", e);
-                    self.send_http_response(INVALID, vec![], Some(b"Request path is not valid UTF-8"));
-                    return Action::Pause;
-                }
-            },
+            Some(p) => {
+                // Paths are not guaranteed to be valid UTF-8; decode lossily for logging
+                std::string::String::from_utf8_lossy(&p).into_owned()
+            }
             None => "/".to_string()
         };
 
@@ -114,11 +110,21 @@ impl HttpContext for HttpBody {
                     return Action::Pause;
                 }
             };
-            let md = rewrite_html(body_str, true);
-            // after conversion the Markdown still can contain HTML entities, so convert them to text
+            let converter = HtmlToMarkdown::builder()
+                .skip_tags(vec!["script", "style", "svg", "noscript", "iframe", "link"])
+                .build();
+            let md = match converter.convert(body_str) {
+                Ok(md) => md,
+                Err(e) => {
+                    println!("cannot convert HTML to Markdown: {}", e);
+                    self.send_http_response(SERVER_ERROR, vec![], Some(b"Failed to convert HTML to Markdown"));
+                    return Action::Pause;
+                }
+            };
+            // extra unescape for double-escaped HTML entities
             let md = unescape(md);
             self.set_http_response_body(0, body_size, md.as_bytes());
-            println!("Converted HTML to Markdown: {}", path);
+            println!("Converted HTML to Markdown: {}, size: {}", path, md.len());
         } else {
             println!("empty body in {}", path);
         }
