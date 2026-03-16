@@ -2,6 +2,7 @@ use proxy_wasm::traits::*;
 use proxy_wasm::types::*;
 use std::str;
 use html2md::rewrite_html;
+use htmlize::unescape;
 
 proxy_wasm::main! {{
     proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> { Box::new(HttpBodyRoot) });
@@ -114,6 +115,8 @@ impl HttpContext for HttpBody {
                 }
             };
             let md = rewrite_html(body_str, true);
+            // after conversion the Markdown still can contain HTML entities, so convert them to text
+            let md = unescape(md);
             self.set_http_response_body(0, body_size, md.as_bytes());
             println!("Converted HTML to Markdown: {}", path);
         } else {
