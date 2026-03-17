@@ -157,7 +157,8 @@ impl HttpContext for HttpBody {
     }
 }
 
-// Checks if the header value contains the expected content type, and charset either not specified or utf-8
+// Checks if the header value contains the expected content type, with optional utf-8 charset,
+// and (for Accept-style values) q != 0.
 fn content_type_match(header_value: &str, expected: &str) -> bool {
     let expected = expected.to_ascii_lowercase();
 
@@ -170,22 +171,27 @@ fn content_type_match(header_value: &str, expected: &str) -> bool {
         }
 
         // Only allow missing charset or explicit utf-8 charset.
+        // If q=0 is provided, the media type is explicitly not acceptable.
         let mut charset: Option<String> = None;
+        let mut q_zero = false;
         for param in parts {
             let mut kv = param.splitn(2, '=');
             let key = kv.next().unwrap_or("").trim().to_ascii_lowercase();
+            let value = kv
+                .next()
+                .unwrap_or("")
+                .trim()
+                .trim_matches('"')
+                .to_ascii_lowercase();
+
             if key == "charset" {
-                let value = kv
-                    .next()
-                    .unwrap_or("")
-                    .trim()
-                    .trim_matches('"')
-                    .to_ascii_lowercase();
                 charset = Some(value);
+            } else if key == "q" {
+                q_zero = value.parse::<f32>().is_ok_and(|weight| weight == 0.0);
             }
         }
 
-        if charset.as_deref().is_none_or(|value| value == "utf-8") {
+        if !q_zero && charset.as_deref().is_none_or(|value| value == "utf-8") {
             return true;
         }
     }

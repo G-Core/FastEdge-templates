@@ -12,7 +12,7 @@ Behavior summary:
 
 - Detects markdown intent from request `Accept: text/markdown`.
 - Converts only `Content-Type: text/html` origin responses.
-- Rewrites response body to Markdown using `fast_html2md`.
+- Rewrites response body to Markdown using `htmd`.
 - Updates response headers for transformed content.
 
 See `html2md/README.md` for details.
