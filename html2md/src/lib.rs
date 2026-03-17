@@ -76,8 +76,22 @@ impl HttpContext for HttpBody {
                 self.set_property(vec!["response.md"], Some(b"true"));
             }
         }
-        // use Convert for cache key
-        self.add_http_response_header("Vary", CONVERT_FLAG);
+
+        // use Convert for cache key; merge with any existing Vary header
+        if let Some(mut vary) = self.get_http_response_header("Vary") {
+            let has_convert = vary
+                .split(',')
+                .any(|v| v.trim().eq_ignore_ascii_case(CONVERT_FLAG));
+            if !has_convert {
+                if !vary.is_empty() {
+                    vary.push_str(", ");
+                }
+                vary.push_str(CONVERT_FLAG);
+                self.set_http_response_header("Vary", Some(&vary));
+            }
+        } else {
+            self.set_http_response_header("Vary", Some(CONVERT_FLAG));
+        }
         Action::Continue
     }
 
