@@ -1,0 +1,14 @@
+[workspace.package]
+version = "0.2.1"
+edition = "2021"
+
+[workspace.dependencies]
+fastedge = "0.3"
+proxy-wasm = "0.2.1"
+
+[workspace]
+members = [
+    "html2md",
+]
+resolver = "2"
+
