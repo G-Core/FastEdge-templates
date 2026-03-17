@@ -1,6 +1,6 @@
 use proxy_wasm::traits::*;
 use proxy_wasm::types::*;
-use std::str;
+use std::{str, env};
 use htmd::HtmlToMarkdown;
 use htmlize::unescape;
 
@@ -24,7 +24,6 @@ impl RootContext for HttpBodyRoot {
 struct HttpBody;
 impl Context for HttpBody {}
 
-const INVALID: u32 = 400;
 const SERVER_ERROR: u32 = 500;
 const CONVERT_FLAG: &str = "Convert";
 const CONTENT_TYPE_HEADER: &str = "Content-Type";
@@ -35,9 +34,12 @@ const TRANSFER_ENCODING_HEADER: &str = "Transfer-Encoding";
 const TRANSFER_ENCODING_CHUNKED: &str = "Chunked";
 const MARKDOWN_MIME: &str = "text/markdown";
 const HTML_MIME: &str = "text/html";
+const IGNORE_BODY_ERROR_PARAM: &str = "IGNORE_ERROR";
 
 impl HttpContext for HttpBody {
     fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
+        // remove any existing Convert flag to avoid interference from previous requests in the same context
+        self.set_http_request_header(CONVERT_FLAG, None);
         let accept = match self.get_http_request_header(ACCEPT_HEADER) {
             None => return Action::Continue,
             Some(u) => u
@@ -60,14 +62,10 @@ impl HttpContext for HttpBody {
         if let Some(content_type) = self.get_http_response_header(CONTENT_TYPE_HEADER) {
             if content_type_match(&content_type, HTML_MIME) {
                 let path = match self.get_property(vec!["request.path"]) {
-                    Some(p) => match std::string::String::from_utf8(p) {
-                        Ok(s) => s,
-                        Err(e) => {
-                            println!("cannot convert path to string {}", e);
-                            self.send_http_response(INVALID, vec![], Some(b"Request path is not valid UTF-8"));
-                            return Action::Pause;
-                        }
-                    },
+                    Some(p) => {
+                        // Paths are not guaranteed to be valid UTF-8; decode lossily for logging
+                        std::string::String::from_utf8_lossy(&p).into_owned()
+                    }
                     None => "/".to_string()
                 };
                 println!("Got HTML to convert: {}", path);
@@ -101,11 +99,17 @@ impl HttpContext for HttpBody {
             None => "/".to_string()
         };
 
+        let ignore_error = env::var(IGNORE_BODY_ERROR_PARAM).unwrap_or_else(|_| "false".to_string()) == "true";
+
         if let Some(body_bytes) = self.get_http_response_body(0, body_size) {
             let body_str = match str::from_utf8(&body_bytes) {
                 Ok(s) => s,
                 Err(e) => {
                     println!("cannot convert body to string {}", e);
+                    if ignore_error {
+                        println!("Ignoring body error and passing through original response");
+                        return Action::Continue;
+                    }
                     self.send_http_response(SERVER_ERROR, vec![], Some(b"Origin response is not valid UTF-8"));
                     return Action::Pause;
                 }
@@ -117,6 +121,10 @@ impl HttpContext for HttpBody {
                 Ok(md) => md,
                 Err(e) => {
                     println!("cannot convert HTML to Markdown: {}", e);
+                    if ignore_error {
+                        println!("Ignoring body error and passing through original response");
+                        return Action::Continue;
+                    }
                     self.send_http_response(SERVER_ERROR, vec![], Some(b"Failed to convert HTML to Markdown"));
                     return Action::Pause;
                 }
@@ -133,14 +141,35 @@ impl HttpContext for HttpBody {
     }
 }
 
+// Checks if the header value contains the expected content type, and charset either not specified or utf-8
 fn content_type_match(header_value: &str, expected: &str) -> bool {
     let expected = expected.to_ascii_lowercase();
 
     // Accept header can be a comma-separated list
     for item in header_value.split(',') {
-        // Remove parameters (after ';'), trim, and lowercase
-        let mime = item.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
-        if mime == expected {
+        let mut parts = item.split(';');
+        let mime = parts.next().unwrap_or("").trim().to_ascii_lowercase();
+        if mime != expected {
+            continue;
+        }
+
+        // Only allow missing charset or explicit utf-8 charset.
+        let mut charset: Option<String> = None;
+        for param in parts {
+            let mut kv = param.splitn(2, '=');
+            let key = kv.next().unwrap_or("").trim().to_ascii_lowercase();
+            if key == "charset" {
+                let value = kv
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .trim_matches('"')
+                    .to_ascii_lowercase();
+                charset = Some(value);
+            }
+        }
+
+        if charset.as_deref().is_none_or(|value| value == "utf-8") {
             return true;
         }
     }
