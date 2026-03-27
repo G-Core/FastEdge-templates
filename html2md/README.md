@@ -2,6 +2,8 @@
 
 Proxy-Wasm template that converts HTML origin responses to Markdown when the client requests `text/markdown`.
 
+[![Deploy Now](../assets/button_deploy-now.png)](https://portal.gcore.com/fastedge/create-template-app/110)
+
 ## What It Does
 
 The filter runs in HTTP context and performs conversion only when all of the following are true:
