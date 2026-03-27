@@ -2,7 +2,7 @@
 
 Proxy-Wasm template that converts HTML origin responses to Markdown when the client requests `text/markdown`.
 
-# <kbd>[**Deploy Now**](https://portal.gcore.com/fastedge/create-template-app/110)</kbd>
+[![Deploy Now](../assets/button_deploy-now.png)](https://portal.gcore.com/fastedge/create-template-app/110)
 
 ## What It Does
 
