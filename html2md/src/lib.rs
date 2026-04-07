@@ -83,19 +83,20 @@ impl HttpContext for HttpBody {
         }
 
         // use Convert for cache key; merge with any existing Vary header
-        if let Some(mut vary) = self.get_http_response_header("Vary") {
+        if let Some(vary) = self.get_http_response_header("Vary") {
             let has_convert = vary
                 .split(',')
                 .any(|v| v.trim().eq_ignore_ascii_case(CONVERT_FLAG));
             if !has_convert {
-                if !vary.is_empty() {
-                    vary.push_str(", ");
-                }
-                vary.push_str(CONVERT_FLAG);
-                self.set_http_response_header("Vary", Some(&vary));
+                let new_vary = if vary.is_empty() {
+                    CONVERT_FLAG.to_string()
+                } else {
+                    format!("{}, {}", CONVERT_FLAG, vary)
+                };
+                self.set_http_response_header("Vary", Some(&new_vary));
             }
         } else {
-            self.set_http_response_header("Vary", Some(CONVERT_FLAG));
+            self.add_http_response_header("Vary", CONVERT_FLAG);
         }
         Action::Continue
     }
