@@ -36,16 +36,16 @@ impl HttpBody {
     }
 }
 
-const SERVER_ERROR: u32 = 500;
 const CONVERT_FLAG: &str = "Convert";
 const CONTENT_TYPE_HEADER: &str = "Content-Type";
 const ACCEPT_HEADER: &str = "Accept";
 const ACCEPT_ENCODING_HEADER: &str = "Accept-Encoding";
 const CONTENT_LENGTH_HEADER: &str = "Content-Length";
 const TRANSFER_ENCODING_HEADER: &str = "Transfer-Encoding";
-const TRANSFER_ENCODING_CHUNKED: &str = "Chunked";
+const TRANSFER_ENCODING_CHUNKED: &str = "chunked";
 const MARKDOWN_MIME: &str = "text/markdown";
 const HTML_MIME: &str = "text/html";
+const FLAG_MARKDOWN: &str = "markdown";
 
 impl HttpContext for HttpBody {
     fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
@@ -56,20 +56,21 @@ impl HttpContext for HttpBody {
         };
 
         if content_type_match(&accept, MARKDOWN_MIME) {
-            self.add_http_request_header(CONVERT_FLAG, "markdown");
+            self.add_http_request_header(CONVERT_FLAG, FLAG_MARKDOWN);
             self.set_http_request_header(ACCEPT_ENCODING_HEADER, None); // prevent response compression
+        } else {
+            self.add_http_request_header(CONVERT_FLAG, "");
         }
 
         Action::Continue
     }
 
     fn on_http_response_headers(&mut self, _: usize, _: bool) -> Action {
-        if self.get_http_request_header(CONVERT_FLAG).is_none() {
-            return Action::Continue;
-        };
+        if self.get_http_response_header(CONTENT_TYPE_HEADER)
+                    .filter(|content_type| content_type_match(content_type, HTML_MIME)).is_some() {
 
-        if let Some(content_type) = self.get_http_response_header(CONTENT_TYPE_HEADER) {
-            if content_type_match(&content_type, HTML_MIME) {
+            if self.get_http_request_header(CONVERT_FLAG)
+                    .filter(|flag| flag == FLAG_MARKDOWN).is_some() {
                 println!("Got HTML to convert: {}", self.get_path());
 
                 self.remove_http_response_header(CONTENT_LENGTH_HEADER);
@@ -80,24 +81,25 @@ impl HttpContext for HttpBody {
                 );
                 self.set_property(vec!["response.md"], Some(b"true"));
             }
+
+            // use Convert for cache key; merge with any existing Vary header
+            if let Some(vary) = self.get_http_response_header("Vary") {
+                let has_convert = vary
+                    .split(',')
+                    .any(|v| v.trim().eq_ignore_ascii_case(CONVERT_FLAG));
+                if !has_convert {
+                    let new_vary = if vary.is_empty() {
+                        CONVERT_FLAG.to_string()
+                    } else {
+                        format!("{}, {}", CONVERT_FLAG, vary)
+                    };
+                    self.set_http_response_header("Vary", Some(&new_vary));
+                }
+            } else {
+                self.add_http_response_header("Vary", CONVERT_FLAG);
+            }
         }
 
-        // use Convert for cache key; merge with any existing Vary header
-        if let Some(vary) = self.get_http_response_header("Vary") {
-            let has_convert = vary
-                .split(',')
-                .any(|v| v.trim().eq_ignore_ascii_case(CONVERT_FLAG));
-            if !has_convert {
-                let new_vary = if vary.is_empty() {
-                    CONVERT_FLAG.to_string()
-                } else {
-                    format!("{}, {}", CONVERT_FLAG, vary)
-                };
-                self.set_http_response_header("Vary", Some(&new_vary));
-            }
-        } else {
-            self.add_http_response_header("Vary", CONVERT_FLAG);
-        }
         Action::Continue
     }
 
@@ -115,17 +117,8 @@ impl HttpContext for HttpBody {
             let body_str = match str::from_utf8(&body_bytes) {
                 Ok(s) => s,
                 Err(e) => {
-                    println!(
-                        "cannot convert body to string {} for {}",
-                        e,
-                        self.get_path()
-                    );
-                    self.send_http_response(
-                        SERVER_ERROR,
-                        vec![],
-                        Some(b"Origin response is not valid UTF-8"),
-                    );
-                    return Action::Pause;
+                    println!("cannot convert body to string {} for {}", e, self.get_path());
+                    return Action::Continue;    // if body is not valid UTF-8, skip conversion and return original body
                 }
             };
             let converter = HtmlToMarkdown::builder()
@@ -134,17 +127,8 @@ impl HttpContext for HttpBody {
             let md = match converter.convert(body_str) {
                 Ok(md) => md,
                 Err(e) => {
-                    println!(
-                        "cannot convert HTML to Markdown: {} for {}",
-                        e,
-                        self.get_path()
-                    );
-                    self.send_http_response(
-                        SERVER_ERROR,
-                        vec![],
-                        Some(b"Failed to convert HTML to Markdown"),
-                    );
-                    return Action::Pause;
+                    println!("cannot convert HTML to Markdown: {} for {}", e, self.get_path());
+                    return Action::Continue;    // if conversion fails, skip and return original body
                 }
             };
             // extra unescape for double-escaped HTML entities
