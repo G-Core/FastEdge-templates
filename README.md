@@ -1,22 +1,33 @@
 # FastEdge Templates
 
-FastEdge application templates.
+FastEdge application templates for [Gcore FastEdge](https://gcore.com/fastedge).
 
-## Included Template
+Each template is a standalone project you can deploy directly from the Gcore portal
+or copy out and modify to suit your needs. Templates have no dependencies on each
+other.
+
+## Templates
 
 ### html2md
 
-`html2md` is a `cdylib` Proxy-Wasm module for content negotiation from HTML to Markdown.
+Proxy-WASM filter that converts HTML origin responses to Markdown when the client
+sends `Accept: text/markdown`. Zero configuration — drop it in front of any
+HTML-serving origin.
 
-Behavior summary:
+See [`html2md/README.md`](html2md/README.md) for details and the deploy button.
 
-- Detects markdown intent from request `Accept: text/markdown`.
-- Converts only `Content-Type: text/html` origin responses.
-- Rewrites response body to Markdown using `htmd`.
-- Updates response headers for transformed content.
+### edge-sso
 
-See `html2md/README.md` for details.
+Multi-provider SSO bolt-on — an Identity-Aware Proxy that adds login (Google,
+GitHub, Microsoft, Facebook, SAML) to any existing site without changing the
+backend. Comes in three delivery variants:
+
+- **gate-only** — allow/deny at the edge
+- **cookie** — issues a verifiable JWT the origin can inspect
+- **header** — injects a signed `X-Forwarded-User` header upstream
+
+See [`edge-sso/README.md`](edge-sso/README.md) for details.
 
 ## License
 
-Apache-2.0. See `LICENSE`.
+Apache-2.0. See [`LICENSE`](LICENSE).

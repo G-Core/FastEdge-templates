@@ -1,0 +1,315 @@
+{
+  "name": "sso-header-auth",
+  "api_type": "wasi-http",
+  "description": "SSO auth app for the header variant. Handles identity-provider federation, issues signed HS256 session tokens, and injects x-sso-* identity headers upstream.",
+  "params": [
+    {
+      "name": "SESSION_SECRET",
+      "data_type": "secret",
+      "mandatory": true,
+      "descr": "Random 32-byte base64url string. Signs OAuth/SAML flow cookies in all variants; also signs HS256 session tokens in gate-only and header variants — so the CDN filter needs the same value in those variants.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_AUDIENCE",
+      "data_type": "string",
+      "mandatory": true,
+      "descr": "Token audience claim (e.g. https://app.example.com). The filter rejects any token whose aud doesn't match. Must be identical across both apps — mismatch causes all requests to redirect to login.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_ISSUER",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Token issuer claim. Validated only when set on both apps. If set, must be identical across both apps.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SESSION_COOKIE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Name of the cookie carrying the session token. Default: sso_session. Must be identical across both apps — mismatch means the filter never sees the cookie the auth-app sets.",
+      "metadata": "{\"default_value\":\"sso_session\"}"
+    },
+    {
+      "name": "GOOGLE_CLIENT_ID",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "OAuth 2.0 client ID from Google Cloud Console.",
+      "metadata": "{}"
+    },
+    {
+      "name": "GOOGLE_CLIENT_SECRET",
+      "data_type": "secret",
+      "mandatory": false,
+      "descr": "OAuth 2.0 client secret from Google Cloud Console.",
+      "metadata": "{}"
+    },
+    {
+      "name": "GOOGLE_REDIRECT_URI",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Must match exactly what is registered in Google Cloud Console. Format: https://<host>/auth/callback/google",
+      "metadata": "{}"
+    },
+    {
+      "name": "GITHUB_CLIENT_ID",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "OAuth app client ID from GitHub Developer settings.",
+      "metadata": "{}"
+    },
+    {
+      "name": "GITHUB_CLIENT_SECRET",
+      "data_type": "secret",
+      "mandatory": false,
+      "descr": "OAuth app client secret from GitHub Developer settings.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MICROSOFT_CLIENT_ID",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Application (client) ID from your Entra ID app registration.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MICROSOFT_CLIENT_SECRET",
+      "data_type": "secret",
+      "mandatory": false,
+      "descr": "Client secret from your Entra ID app registration.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MICROSOFT_REDIRECT_URI",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Must match exactly what is registered in Entra ID. Format: https://<host>/auth/callback/microsoft",
+      "metadata": "{}"
+    },
+    {
+      "name": "MICROSOFT_TENANT",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Tenant ID, domain, or common/organizations/consumers. Warning: a wildcard value lets any Microsoft tenant sign in — set MICROSOFT_ALLOWED_TENANTS to restrict.",
+      "metadata": "{\"default_value\":\"common\"}"
+    },
+    {
+      "name": "MICROSOFT_ALLOWED_TENANTS",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Comma-separated tenant IDs that may sign in. Strongly recommended when MICROSOFT_TENANT is a wildcard (common/organizations/consumers).",
+      "metadata": "{}"
+    },
+    {
+      "name": "FACEBOOK_CLIENT_ID",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Meta app ID from the Meta developer dashboard.",
+      "metadata": "{}"
+    },
+    {
+      "name": "FACEBOOK_CLIENT_SECRET",
+      "data_type": "secret",
+      "mandatory": false,
+      "descr": "Meta app secret from the Meta developer dashboard.",
+      "metadata": "{}"
+    },
+    {
+      "name": "FACEBOOK_REDIRECT_URI",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Must match exactly what is registered in Meta developer settings. Format: https://<host>/auth/callback/facebook",
+      "metadata": "{}"
+    },
+    {
+      "name": "IDP_SSO_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Identity provider single sign-on URL — the endpoint that receives AuthnRequests.",
+      "metadata": "{}"
+    },
+    {
+      "name": "IDP_ENTITY_ID",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "IdP entityID. Must exactly match the Issuer element in signed SAML assertions.",
+      "metadata": "{}"
+    },
+    {
+      "name": "IDP_CERT",
+      "data_type": "secret",
+      "mandatory": false,
+      "descr": "IdP signing certificate in PEM format (with or without header/footer) or bare base64.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SP_ENTITY_ID",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "This service provider's entityID. Register this value with your IdP.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SP_ACS_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Assertion Consumer Service URL. Register this with your IdP. Format: https://<host>/auth/callback",
+      "metadata": "{}"
+    },
+    {
+      "name": "SAML_CLAIM_MAP",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "JSON object mapping standard claim names to SAML attribute names, overriding built-in fallbacks.",
+      "metadata": "{}"
+    },
+    {
+      "name": "IDP_LABEL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Text shown on the SAML login button. Default: SSO.",
+      "metadata": "{\"default_value\":\"SSO\"}"
+    },
+    {
+      "name": "IDP_ICON_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Icon image URL shown on the SAML login button.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_PROVIDERS",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Comma list of providers to show on the login page (google,github,microsoft,facebook,saml). Omit to show all configured providers.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_CLAIMS",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Comma list of identity claims to include beyond sub: email,name,picture,given_name,family_name. The header variant forwards these as x-sso-* headers to the origin.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_ALLOWED_ORIGINS",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Comma list of absolute origins allowed as ?redirect= targets after login. Relative paths are always allowed. Leave empty for relative-only (safe default).",
+      "metadata": "{}"
+    },
+    {
+      "name": "CANONICAL_HOST",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Hostname enforced via 301 redirect, keeping OAuth/SAML callback URLs stable. Recommended: set to the deployment host.",
+      "metadata": "{}"
+    },
+    {
+      "name": "LOGIN_PAGE_TITLE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Heading shown on the built-in login page.",
+      "metadata": "{}"
+    },
+    {
+      "name": "LOGIN_PAGE_SUBTITLE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Subheading shown below the title on the built-in login page.",
+      "metadata": "{}"
+    },
+    {
+      "name": "LOGIN_PAGE_LOGO_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "URL of a logo image shown on the login page.",
+      "metadata": "{}"
+    },
+    {
+      "name": "LOGIN_PAGE_FAVICON_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "URL of the favicon for the login page.",
+      "metadata": "{}"
+    },
+    {
+      "name": "LOGIN_PAGE_ACCENT_COLOR",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "CSS color value used for buttons and links on the login page. Default: #0066cc.",
+      "metadata": "{\"default_value\":\"#0066cc\"}"
+    },
+    {
+      "name": "LOGIN_PAGE_BACKGROUND_COLOR",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "CSS color value for the login page background. Default: #f0f2f5.",
+      "metadata": "{\"default_value\":\"#f0f2f5\"}"
+    },
+    {
+      "name": "LOGIN_PAGE_CSS_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "URL of a stylesheet injected into the built-in login page for custom styling.",
+      "metadata": "{}"
+    },
+    {
+      "name": "GOOGLE_OAUTH_BASE_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Override Google OAuth2 base URL. For testing only.",
+      "metadata": "{}"
+    },
+    {
+      "name": "GOOGLE_JWKS_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Override Google JWKS endpoint. For testing only.",
+      "metadata": "{}"
+    },
+    {
+      "name": "GITHUB_OAUTH_BASE_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Override GitHub OAuth base URL. For testing only.",
+      "metadata": "{}"
+    },
+    {
+      "name": "GITHUB_API_BASE_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Override GitHub API base URL. For testing only.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MICROSOFT_OAUTH_BASE_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Override Microsoft OIDC base URL. For testing only.",
+      "metadata": "{}"
+    },
+    {
+      "name": "FACEBOOK_OAUTH_BASE_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Override Facebook OAuth base URL. For testing only.",
+      "metadata": "{}"
+    },
+    {
+      "name": "FACEBOOK_API_BASE_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Override Facebook Graph API base URL. For testing only.",
+      "metadata": "{}"
+    },
+    {
+      "name": "FACEBOOK_API_VERSION",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Override Facebook Graph API version (e.g. v18.0). For testing only.",
+      "metadata": "{}"
+    }
+  ]
+}

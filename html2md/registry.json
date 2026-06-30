@@ -1,0 +1,6 @@
+{
+  "name": "html2md",
+  "api_type": "proxy-wasm",
+  "description": "Transform origin's HTML responses to Markdown format when request header \"Accept\" is equal to \"text/markdown\". Particularly useful for AI Agents.",
+  "params": []
+}

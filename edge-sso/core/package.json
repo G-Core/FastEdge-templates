@@ -1,0 +1,34 @@
+{
+  "name": "@sso/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared federation + session logic for the edge SSO templates (TypeScript source, bundled by each template)",
+  "exports": {
+    ".": "./federation/index.ts",
+    "./federation": "./federation/index.ts",
+    "./session": "./session/token.ts",
+    "./session/key": "./session/key.ts",
+    "./config": "./federation/config.ts",
+    "./providers/common": "./federation/providers/common.ts",
+    "./providers/registry": "./federation/providers/registry.ts",
+    "./providers/google-oidc": "./federation/providers/google-oidc.ts",
+    "./providers/microsoft-oidc": "./federation/providers/microsoft-oidc.ts",
+    "./util/redirect": "./federation/util/redirect.ts",
+    "./saml-claims": "./federation/saml/claims.ts",
+    "./saml-response": "./federation/saml/response.ts"
+  },
+  "dependencies": {
+    "@peculiar/x509": "catalog:",
+    "@xmldom/xmldom": "catalog:",
+    "jose": "catalog:",
+    "xmldsigjs": "catalog:"
+  },
+  "peerDependencies": {
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@gcoredev/fastedge-sdk-js": "catalog:",
+    "hono": "catalog:"
+  }
+}

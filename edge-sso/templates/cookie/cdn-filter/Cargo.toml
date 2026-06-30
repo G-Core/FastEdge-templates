@@ -1,0 +1,12 @@
+[package]
+name = "sso-guard-cookie"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+sso-guard = { path = "../../../core/filter", default-features = false, features = ["alg-es256"] }
+proxy-wasm = { workspace = true }
+
+[lib]
+name = "sso_guard_cookie"
+crate-type = ["cdylib"]

@@ -1,0 +1,11 @@
+{
+  "name": "edge-sso",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Edge SSO bolt-on — shared core + per-variant templates (gate-only / cookie / header)",
+  "scripts": {
+    "build": "pnpm -r run --if-present build",
+    "test": "pnpm -r run --if-present test"
+  }
+}
