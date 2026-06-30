@@ -58,7 +58,10 @@ impl HttpContext for OtpGuard {
         let cookie_header = self.get_http_request_header("cookie").unwrap_or_default();
         let token = match extract_cookie(&cookie_header, &cookie_name) {
             Some(t) => t,
-            None => return self.deny(&full_path, &login_url, "no mfa_session cookie"),
+            None => {
+                let reason = format!("no {cookie_name} cookie");
+                return self.deny(&full_path, &login_url, &reason);
+            }
         };
 
         let claims = match verify_jwt(&token) {
@@ -89,7 +92,7 @@ impl HttpContext for OtpGuard {
         }
 
         println!(
-            "otp_guard: authorized — valid mfa_session (sub={}) for {full_path}",
+            "otp_guard: authorized — valid {cookie_name} (sub={}) for {full_path}",
             claims.sub.as_deref().unwrap_or("<none>")
         );
 

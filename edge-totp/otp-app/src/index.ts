@@ -148,9 +148,11 @@ function buildApp(authPrefix: string): Hono {
     const claims = await verifyHandoffTicket(ticket, secrets.handoffKey);
     if (!claims) return c.text("Invalid or expired ticket", 400);
 
+    if (!cfg.kvStoreName) return c.text("KV_STORE_NAME not configured", 503);
+
     // Not enrolled: send to self-service activation, or refuse when self-service
     // enrollment is disabled (admin-provisioned deployments).
-    if (cfg.kvStoreName && !isEnrolled(cfg.kvStoreName, claims.sub, cfg.kvKeyPrefix)) {
+    if (!isEnrolled(cfg.kvStoreName, claims.sub, cfg.kvKeyPrefix)) {
       if (!cfg.allowSelfEnrollment) {
         return c.text("Not enrolled. Please contact your administrator.", 403);
       }
@@ -452,7 +454,12 @@ function buildApp(authPrefix: string): Hono {
 
     if (!cfg.kvStoreName) return c.text("KV_STORE_NAME not configured", 503);
     const seed = readSeed(cfg.kvStoreName, userId, cfg.kvKeyPrefix);
-    if (!seed) return c.json({ error: "User not enrolled" }, 403);
+    if (!seed) {
+      if (ct.includes("application/json")) {
+        return c.json({ error: "User not enrolled" }, 403);
+      }
+      return c.text("Not enrolled. Please contact your administrator.", 403);
+    }
 
     // Find which time-step matched, then check POP-local replay guard
     const matchedStep = await findMatchingStep(code, seed, {
