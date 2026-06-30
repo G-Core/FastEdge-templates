@@ -28,7 +28,7 @@ Recurring question: could the OAuth/redirect logic fold into the filter so custo
 ## Repo structure — monorepo, `core/` + `templates/`
 
 ```
-saml-app/
+edge-sso/
 ├── core/
 │   ├── federation/               # TypeScript package (@sso/core) — runs in the auth-app
 │   │   ├── providers/            # google, github, microsoft, facebook, saml/ (+ common.ts: PKCE, signed state)

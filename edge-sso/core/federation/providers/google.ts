@@ -56,9 +56,7 @@ export async function handleGoogleLogin(c: Context): Promise<Response> {
     const { allowedOrigins } = resolveRuntimeConfig();
     // Validate redirect before storing it in the signed state cookie.
     const redirect = validateRedirect(c.req.query("redirect"), allowedOrigins);
-    console.log(
-      `[google] login: raw redirect=${c.req.query("redirect") ?? "<none>"} → stored=${redirect}`,
-    );
+    console.log(`[google] login: redirect=${redirect ?? "<none>"}`);
 
     const state = generateOAuthState();
     // OIDC nonce, bound into the id_token and checked at callback.

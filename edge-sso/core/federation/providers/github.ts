@@ -91,9 +91,7 @@ export async function handleGitHubLogin(c: Context): Promise<Response> {
     const { allowedOrigins } = resolveRuntimeConfig();
     // Validate redirect before storing it in the signed state cookie.
     const redirect = validateRedirect(c.req.query("redirect"), allowedOrigins);
-    console.log(
-      `[github] login: raw redirect=${c.req.query("redirect") ?? "<none>"} → stored=${redirect}`,
-    );
+    console.log(`[github] login: redirect=${redirect ?? "<none>"}`);
 
     const state = generateOAuthState();
     const { codeVerifier, codeChallenge } = await generatePkcePair();

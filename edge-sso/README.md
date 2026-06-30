@@ -53,7 +53,7 @@ templates/
 Each template's `.env.example` lists all supported environment variables and secrets. Key shared requirements across both apps in a deployment:
 
 - `SESSION_SECRET` — shared signing secret (gate-only and header variants)
-- `SESSION_PUBLIC_KEY` / `SESSION_PRIVATE_KEY` — EC key pair (cookie variant)
+- `SESSION_SIGNING_KEY` / `SESSION_PUBLIC_JWK` — EC key pair (cookie variant; private key secret on auth-app, public JWK env var on cdn-filter)
 - `SSO_AUDIENCE` — must match on both apps; the filter rejects tokens whose `aud` doesn't match
 - `AUTH_PREFIX` — the path prefix reserved for auth routes (default: `/auth`)
 
@@ -67,7 +67,7 @@ See each template's `.env.example` for the full list including per-provider OAut
 | GitHub | OAuth 2.0 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI` |
 | Microsoft | OAuth 2.0 / OIDC | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_REDIRECT_URI` |
 | Facebook | OAuth 2.0 | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`, `FACEBOOK_REDIRECT_URI` |
-| SAML | SAML 2.0 | `SAML_IDP_SSO_URL`, `SAML_IDP_ENTITY_ID`, `SAML_IDP_CERT`, `SAML_SP_ENTITY_ID`, `SAML_ACS_URL` |
+| SAML | SAML 2.0 | `IDP_SSO_URL`, `IDP_ENTITY_ID`, `IDP_CERT`, `SP_ENTITY_ID`, `SP_ACS_URL` |
 
 ## License
 
