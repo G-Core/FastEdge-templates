@@ -28,6 +28,15 @@ backend. Comes in three delivery variants:
 
 See [`edge-sso/README.md`](edge-sso/README.md) for details.
 
+### edge-totp
+
+Edge TOTP MFA bolt-on — adds RFC 6238 two-factor authentication in front of a customer's
+existing login without changing the backend. The customer's origin handles password
+validation and hands off to the edge app for the OTP challenge, which issues a signed
+session cookie that a paired CDN filter enforces on every protected request.
+
+See [`edge-totp/README.md`](edge-totp/README.md) for details.
+
 ## License
 
 Apache-2.0. See [`LICENSE`](LICENSE).

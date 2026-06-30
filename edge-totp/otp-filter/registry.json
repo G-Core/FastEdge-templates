@@ -1,0 +1,49 @@
+{
+  "name": "totp-filter",
+  "api_type": "proxy-wasm",
+  "description": "Edge TOTP MFA enforcement filter. Verifies the mfa_session cookie (HS256) on every CDN request and redirects or denies unauthenticated users. Pairs with totp-app which issues the session after a successful OTP challenge.",
+  "params": [
+    {
+      "name": "MFA_SESSION_KEY",
+      "data_type": "secret",
+      "mandatory": true,
+      "descr": "HS256 key used to verify the mfa_session JWT signed by totp-app. Must be set on both totp-app (signs) and totp-filter (verifies) with the same value.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MFA_AUDIENCE",
+      "data_type": "string",
+      "mandatory": true,
+      "descr": "Required and fail-closed. The filter refuses every session unless this is set and equals the token's aud claim. Must match MFA_AUDIENCE on totp-app (e.g. https://app.example.com).",
+      "metadata": "{}"
+    },
+    {
+      "name": "MFA_ISSUER",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "When set, the token's iss claim must match. Only meaningful if totp-app also sets MFA_ISSUER. Leave unset to skip the issuer check.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MFA_SESSION_COOKIE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Cookie name to read the mfa_session token from. Must match totp-app. Default: mfa_session.",
+      "metadata": "{\"default_value\":\"mfa_session\"}"
+    },
+    {
+      "name": "AUTH_PREFIX",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Path prefix the filter bypasses so the login flow can complete. Must match totp-app's AUTH_PREFIX and the CDN path rule routing to totp-app. Default: /auth/totp",
+      "metadata": "{\"default_value\":\"/auth/totp\"}"
+    },
+    {
+      "name": "MFA_LOGIN_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Where to redirect unauthenticated users. Should be a URL on the customer origin that validates the password session and redirects to /auth/totp/challenge?t=<ticket>. If unset, denied requests get a 401 instead of a redirect.",
+      "metadata": "{}"
+    }
+  ]
+}

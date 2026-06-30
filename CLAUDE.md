@@ -15,6 +15,7 @@ template to adapt it to their needs.
 |---|---|
 | `html2md/` | Proxy-WASM filter: converts HTML origin responses to Markdown on `Accept: text/markdown` |
 | `edge-sso/` | Multi-provider SSO bolt-on (Google, GitHub, Microsoft, Facebook, SAML) — three delivery variants: gate-only, cookie, header |
+| `edge-totp/` | Edge TOTP MFA bolt-on — adds RFC 6238 two-factor auth in front of an existing login; HTTP app (otp-app) + Rust proxy-wasm enforcement filter (otp-filter) |
 
 ## Repo Structure
 
@@ -27,7 +28,8 @@ FastEdge-templates/
 ├── assets/                ← shared marketing assets (deploy buttons, etc.)
 ├── .github/workflows/     ← CI/CD: builds and publishes all templates to Gcore portal
 ├── html2md/               ← standalone Rust/WASM template
-└── edge-sso/              ← standalone mixed Rust+TypeScript SSO template
+├── edge-sso/              ← standalone mixed Rust+TypeScript SSO template
+└── edge-totp/             ← standalone mixed Rust+TypeScript TOTP MFA template
 ```
 
 ## Standalone Principle

@@ -1,0 +1,15 @@
+packages:
+  - otp-app
+  - otp-filter
+
+# Single source of truth for shared dependency versions. Packages reference these
+# with the "catalog:" specifier instead of pinning their own version, so the
+# HTTP app (otp-app) and the filter's test harness (otp-filter) can't drift.
+catalog:
+  "@gcoredev/fastedge-test": ^0.2.4
+  "@gcoredev/fastedge-sdk-js": ^2.5.1
+  jose: ^6.2.2
+  tsx: ^4.20.6
+
+onlyBuiltDependencies:
+  - esbuild
