@@ -105,13 +105,15 @@ impl HttpContext for HttpBody {
     }
 
     fn on_http_response_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
-        if !end_of_stream {
-            return Action::Pause;
-        }
-
-        // only process HTML
+        // process only when on_http_response_headers has set the convert flag,
+        // otherwise just deliver the body to user
         if self.get_property(vec!["response.md"]).is_none() {
             return Action::Continue;
+        }
+
+        // buffer the entire body before converting to markdown, since the conversion library doesn't support streaming
+        if !end_of_stream {
+            return Action::Pause;
         }
 
         if let Some(body_bytes) = self.get_http_response_body(0, body_size) {
