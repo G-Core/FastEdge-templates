@@ -1,0 +1,16 @@
+name: Publish harden-cookies
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'harden-cookies/**'
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish.yml
+    with:
+      template: harden-cookies
+    secrets: inherit

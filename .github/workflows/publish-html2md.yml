@@ -1,0 +1,16 @@
+name: Publish html2md
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'html2md/**'
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish.yml
+    with:
+      template: html2md
+    secrets: inherit
