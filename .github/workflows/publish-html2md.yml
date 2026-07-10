@@ -9,67 +9,8 @@ on:
       - 'html2md/**'
 
 jobs:
-  build_and_publish:
-    name: Build and publish html2md
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Import credentials from Vault
-        uses: hashicorp/vault-action@v3
-        id: creds
-        with:
-          url: https://puppet-vault.gc.onl
-          token: ${{ secrets.VAULT_TOKEN }}
-          secrets: |
-            secret/project_fastedge/harbor-robot-account username | HARBOR_LOGIN ;
-            secret/project_fastedge/harbor-robot-account password | HARBOR_PASSWORD ;
-            secret/project_fastedge/gcore_api/preprod/token token | PREPROD_API_KEY ;
-            secret/project_fastedge/gcore_api/preprod/hostname url | PREPROD_API_URL ;
-            secret/project_fastedge/gcore_api/prod/token token | PROD_API_KEY ;
-            secret/project_fastedge/gcore_api/prod/hostname url | PROD_API_URL ;
-
-      - name: Login to Harbor and pull compiler
-        uses: ./.github/setup-harbor-pull
-        with:
-          harbor_login: ${{ steps.creds.outputs.HARBOR_LOGIN }}
-          harbor_password: ${{ steps.creds.outputs.HARBOR_PASSWORD }}
-
-      - name: Build html2md
-        uses: ./.github/build-rust
-        with:
-          rust_package: html2md
-          working_directory: html2md
-          output_path: html2md/wasm/html2md.wasm
-
-      - name: Read html2md registry
-        id: html2md
-        uses: ./.github/read-template-registry
-        with:
-          template_dir: html2md
-
-      - name: Deploy html2md to preprod
-        uses: gcore-github-actions/fastedge/deploy-template@v1
-        with:
-          api_key: ${{ steps.creds.outputs.PREPROD_API_KEY }}
-          api_url: ${{ steps.creds.outputs.PREPROD_API_URL }}
-          wasm_file: html2md/wasm/html2md.wasm
-          template_name: ${{ steps.html2md.outputs.name }}
-          short_descr: ${{ steps.html2md.outputs.descr }}
-          long_descr: ${{ steps.html2md.outputs.instructions }}
-          params: ${{ steps.html2md.outputs.params }}
-
-      - name: Deploy html2md to prod
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: gcore-github-actions/fastedge/deploy-template@v1
-        with:
-          api_key: ${{ steps.creds.outputs.PROD_API_KEY }}
-          api_url: ${{ steps.creds.outputs.PROD_API_URL }}
-          wasm_file: html2md/wasm/html2md.wasm
-          template_name: ${{ steps.html2md.outputs.name }}
-          template_id: ${{ steps.html2md.outputs.template_id }}
-          short_descr: ${{ steps.html2md.outputs.descr }}
-          long_descr: ${{ steps.html2md.outputs.instructions }}
-          params: ${{ steps.html2md.outputs.params }}
+  publish:
+    uses: ./.github/workflows/_publish.yml
+    with:
+      template: html2md
+    secrets: inherit
