@@ -1,0 +1,36 @@
+{
+  "name": "Harden the cookies",
+  "template_id": 184,
+  "api_type": "proxy-wasm",
+  "description": "CDN app template that hardens Set-Cookie response headers by adding security attributes (Secure, HttpOnly, SameSite=Strict) to targeted cookies.",
+  "params": [
+    {
+      "name": "COOKIE_NAME",
+      "data_type": "string",
+      "descr": "Name of the cookie to harden (or '*' to match all cookies)",
+      "mandatory": true,
+      "metadata": "{\"default_value\":\"*\"}"
+    },
+    {
+      "name": "HTTPONLY",
+      "data_type": "boolean",
+      "descr": "Add 'HttpOnly' attribute",
+      "mandatory": true,
+      "metadata": "{\"default_value\":\"false\"}"
+    },
+    {
+      "name": "SAMESITE",
+      "data_type": "boolean",
+      "descr": "Add 'SameSite=Strict' attribute and value",
+      "mandatory": true,
+      "metadata": "{\"default_value\":\"false\"}"
+    },
+    {
+      "name": "SECURE",
+      "data_type": "boolean",
+      "descr": "Add 'Secure' attribute",
+      "mandatory": true,
+      "metadata": "{\"default_value\":\"false\"}"
+    }
+  ]
+}

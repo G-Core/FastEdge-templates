@@ -1,0 +1,40 @@
+name: Read template registry
+description: Read registry.json and instructions.md for a template and expose them as outputs.
+
+inputs:
+  template_dir:
+    description: Path to the template directory (e.g. html2md).
+    required: true
+
+outputs:
+  name:
+    description: Template display name.
+    value: ${{ steps.read.outputs.name }}
+  template_id:
+    description: Numeric portal template ID.
+    value: ${{ steps.read.outputs.template_id }}
+  descr:
+    description: Short one-line description.
+    value: ${{ steps.read.outputs.descr }}
+  instructions:
+    description: Markdown instructions (long_descr).
+    value: ${{ steps.read.outputs.instructions }}
+  params:
+    description: JSON array of parameter definitions.
+    value: ${{ steps.read.outputs.params }}
+
+runs:
+  using: composite
+  steps:
+    - id: read
+      shell: bash
+      run: |
+        echo "name=$(jq -r '.name' ${{ inputs.template_dir }}/registry.json)" >> "$GITHUB_OUTPUT"
+        echo "template_id=$(jq -r '.template_id' ${{ inputs.template_dir }}/registry.json)" >> "$GITHUB_OUTPUT"
+        echo "descr=$(jq -r '.description' ${{ inputs.template_dir }}/registry.json)" >> "$GITHUB_OUTPUT"
+        echo "params=$(jq -c '.params' ${{ inputs.template_dir }}/registry.json)" >> "$GITHUB_OUTPUT"
+        {
+          echo 'instructions<<EOF'
+          cat ${{ inputs.template_dir }}/instructions.md
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
