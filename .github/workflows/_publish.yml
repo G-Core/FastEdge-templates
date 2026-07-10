@@ -26,10 +26,10 @@ jobs:
           secrets: |
             secret/project_fastedge/harbor-robot-account username | HARBOR_LOGIN ;
             secret/project_fastedge/harbor-robot-account password | HARBOR_PASSWORD ;
-            secret/project_fastedge/gcore_api/preprod/token token | PREPROD_API_KEY ;
-            secret/project_fastedge/gcore_api/preprod/hostname url | PREPROD_API_URL ;
-            secret/project_fastedge/gcore_api/prod/token token | PROD_API_KEY ;
-            secret/project_fastedge/gcore_api/prod/hostname url | PROD_API_URL ;
+            secret/project_fastedge/gcore_api/preprod token | PREPROD_API_KEY ;
+            secret/project_fastedge/gcore_api/preprod hostname | PREPROD_API_URL ;
+            secret/project_fastedge/gcore_api/prod token | PROD_API_KEY ;
+            secret/project_fastedge/gcore_api/prod hostname | PROD_API_URL ;
 
       - name: Login to Harbor and pull compiler
         uses: ./.github/setup-harbor-pull
