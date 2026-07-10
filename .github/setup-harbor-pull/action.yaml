@@ -1,15 +1,15 @@
-name: 'Login to Harbor and Pull Compiler'
-description: 'Logs in to the Harbor registry and pulls the FastEdge compiler image.'
+name: "Login to Harbor and Pull Compiler"
+description: "Logs in to the Harbor registry and pulls the FastEdge compiler image."
 inputs:
   harbor_login:
-    description: 'Harbor registry username'
+    description: "Harbor registry username"
     required: true
   harbor_password:
-    description: 'Harbor registry password'
+    description: "Harbor registry password"
     required: true
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Login to Harbor
       uses: docker/login-action@v3
@@ -20,4 +20,4 @@ runs:
 
     - name: Pull FastEdge compiler image
       shell: bash
-      run: docker pull harbor.p.gc.onl/fastedge/fastedge-apps-compiler:0.0.1
+      run: docker pull harbor.p.gc.onl/fastedge/fastedge-apps-compiler:0.0.2

@@ -1,18 +1,18 @@
-name: 'Build Rust WASM'
-description: 'Builds a Rust cdylib package to wasm32-wasip1 using the FastEdge compiler image.'
+name: "Build Rust WASM"
+description: "Builds a Rust cdylib package to wasm32-wasip1 using the FastEdge compiler image."
 inputs:
   rust_package:
-    description: 'Cargo package name (hyphens allowed; output filename uses underscores)'
+    description: "Cargo package name (hyphens allowed; output filename uses underscores)"
     required: true
   working_directory:
-    description: 'Directory containing the standalone Cargo project (relative to repo root)'
+    description: "Directory containing the standalone Cargo project (relative to repo root)"
     required: true
   output_path:
-    description: 'Destination path for the built .wasm file (relative to repo root)'
+    description: "Destination path for the built .wasm file (relative to repo root)"
     required: true
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Build ${{ inputs.rust_package }}
       shell: bash
@@ -24,7 +24,7 @@ runs:
         docker run --rm \
           -v "$WORKSPACE:/usr/src/myapp" \
           -w "/usr/src/myapp/$WORKING_DIR" \
-          harbor.p.gc.onl/fastedge/fastedge-apps-compiler:0.0.1 \
+          harbor.p.gc.onl/fastedge/fastedge-apps-compiler:0.0.2 \
           cargo build --release --target wasm32-wasip1 --package "$RUST_PACKAGE"
 
     - name: Copy wasm to output path
