@@ -28,13 +28,15 @@ runs:
   steps:
     - id: read
       shell: bash
+      env:
+        TEMPLATE_DIR: ${{ inputs.template_dir }}
       run: |
-        echo "name=$(jq -r '.name' ${{ inputs.template_dir }}/registry.json)" >> "$GITHUB_OUTPUT"
-        echo "template_id=$(jq -r '.template_id' ${{ inputs.template_dir }}/registry.json)" >> "$GITHUB_OUTPUT"
-        echo "descr=$(jq -r '.description' ${{ inputs.template_dir }}/registry.json)" >> "$GITHUB_OUTPUT"
-        echo "params=$(jq -c '.params' ${{ inputs.template_dir }}/registry.json)" >> "$GITHUB_OUTPUT"
+        echo "name=$(jq -r '.name' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
+        echo "template_id=$(jq -r '.template_id' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
+        echo "descr=$(jq -r '.description' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
+        echo "params=$(jq -c '.params' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
         {
           echo 'instructions<<EOF'
-          cat ${{ inputs.template_dir }}/instructions.md
+          cat "$TEMPLATE_DIR/instructions.md"
           echo 'EOF'
         } >> "$GITHUB_OUTPUT"

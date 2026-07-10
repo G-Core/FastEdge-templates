@@ -5,7 +5,7 @@ inputs:
     description: 'Cargo package name (hyphens allowed; output filename uses underscores)'
     required: true
   working_directory:
-    description: 'Directory containing the Cargo workspace (relative to repo root)'
+    description: 'Directory containing the standalone Cargo project (relative to repo root)'
     required: true
   output_path:
     description: 'Destination path for the built .wasm file (relative to repo root)'
@@ -16,17 +16,25 @@ runs:
   steps:
     - name: Build ${{ inputs.rust_package }}
       shell: bash
+      env:
+        WORKSPACE: ${{ github.workspace }}
+        WORKING_DIR: ${{ inputs.working_directory }}
+        RUST_PACKAGE: ${{ inputs.rust_package }}
       run: |
         docker run --rm \
-          -v ${{ github.workspace }}:/usr/src/myapp \
-          -w /usr/src/myapp/${{ inputs.working_directory }} \
+          -v "$WORKSPACE:/usr/src/myapp" \
+          -w "/usr/src/myapp/$WORKING_DIR" \
           harbor.p.gc.onl/fastedge/fastedge-apps-compiler:0.0.1 \
-          cargo build --release --target wasm32-wasip1 --package ${{ inputs.rust_package }}
+          cargo build --release --target wasm32-wasip1 --package "$RUST_PACKAGE"
 
     - name: Copy wasm to output path
       shell: bash
+      env:
+        RUST_PACKAGE: ${{ inputs.rust_package }}
+        WORKING_DIR: ${{ inputs.working_directory }}
+        OUTPUT_PATH: ${{ inputs.output_path }}
       run: |
-        WASM_FILE=$(echo "${{ inputs.rust_package }}" | tr '-' '_').wasm
-        mkdir -p $(dirname "${{ inputs.output_path }}")
-        cp "${{ inputs.working_directory }}/target/wasm32-wasip1/release/$WASM_FILE" \
-           "${{ inputs.output_path }}"
+        WASM_FILE="$(echo "$RUST_PACKAGE" | tr '-' '_').wasm"
+        mkdir -p "$(dirname "$OUTPUT_PATH")"
+        cp "$WORKING_DIR/target/wasm32-wasip1/release/$WASM_FILE" \
+           "$OUTPUT_PATH"
