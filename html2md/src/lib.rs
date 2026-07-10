@@ -68,10 +68,12 @@ impl HttpContext for HttpBody {
         // use Convert for cache key; merge with any existing Vary header
         // missing Convert is a distinct value so it won't cause cache misses for requests that don't accept markdown
         if let Some(vary) = self.get_http_response_header("Vary") {
+            // "*" must stand alone per RFC 9110; leave it untouched
+            let is_wildcard = vary.trim() == "*";
             let has_convert = vary
                 .split(',')
                 .any(|v| v.trim().eq_ignore_ascii_case(CONVERT_FLAG));
-            if !has_convert {
+            if !is_wildcard && !has_convert {
                 let new_vary = if vary.is_empty() {
                     CONVERT_FLAG.to_string()
                 } else {
