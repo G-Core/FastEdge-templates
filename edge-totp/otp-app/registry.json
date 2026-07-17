@@ -1,6 +1,7 @@
 {
-  "name": "totp-app",
+  "name": "TOTP - Challenge-Verify App",
   "api_type": "wasi-http",
+  "template_id": 190,
   "description": "Edge TOTP MFA bolt-on. Hosts the OTP challenge/verify UI and enrolment flow in front of an existing login. Pairs with totp-filter which enforces the mfa_session cookie on CDN resources.",
   "params": [
     {

@@ -1,5 +1,6 @@
 {
-  "name": "sso-header-filter",
+  "name": "SSO - Header CDN Filter",
+  "template_id": 196,
   "api_type": "proxy-wasm",
   "description": "SSO CDN filter for the header variant. Verifies HS256 session tokens on every request, redirects unauthenticated users, and injects x-sso-* identity headers upstream.",
   "params": [

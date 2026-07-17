@@ -1,6 +1,7 @@
 {
-  "name": "totp-filter",
+  "name": "TOTP - MFA Enforcement Filter",
   "api_type": "proxy-wasm",
+  "template_id": 189,
   "description": "Edge TOTP MFA enforcement filter. Verifies the mfa_session cookie (HS256) on every CDN request and redirects or denies unauthenticated users. Pairs with totp-app which issues the session after a successful OTP challenge.",
   "params": [
     {

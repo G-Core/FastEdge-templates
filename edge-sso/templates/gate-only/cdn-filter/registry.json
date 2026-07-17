@@ -1,5 +1,6 @@
 {
-  "name": "sso-gate-only-filter",
+  "name": "SSO - Gate-Only CDN Filter",
+  "template_id": 195,
   "api_type": "proxy-wasm",
   "description": "SSO CDN filter for the gate-only variant. Verifies HS256 session tokens on every request and redirects unauthenticated users.",
   "params": [

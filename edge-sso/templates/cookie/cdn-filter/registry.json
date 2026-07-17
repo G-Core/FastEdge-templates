@@ -1,5 +1,6 @@
 {
-  "name": "sso-cookie-filter",
+  "name": "SSO - Cookie CDN Filter",
+  "template_id": 194,
   "api_type": "proxy-wasm",
   "description": "SSO CDN filter for the cookie variant. Verifies ES256 session tokens using the public JWK on every request and redirects unauthenticated users.",
   "params": [

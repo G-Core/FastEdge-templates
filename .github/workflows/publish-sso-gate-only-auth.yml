@@ -1,0 +1,21 @@
+name: Publish sso-gate-only-auth
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'edge-sso/core/**'
+      - 'edge-sso/templates/gate-only/auth-app/**'
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish_js.yml
+    with:
+      template: sso-gate-only-auth
+      working_directory: edge-sso
+      build_command: pnpm -C templates/gate-only/auth-app build
+      output_path: edge-sso/templates/gate-only/auth-app/wasm/gate-auth-app.wasm
+      registry_dir: edge-sso/templates/gate-only/auth-app
+    secrets: inherit

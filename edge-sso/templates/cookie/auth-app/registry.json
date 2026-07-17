@@ -1,5 +1,6 @@
 {
-  "name": "sso-cookie-auth",
+  "name": "SSO - Cookie Auth App",
+  "template_id": 191,
   "api_type": "wasi-http",
   "description": "SSO auth app for the cookie variant. Handles identity-provider federation and issues signed ES256 session tokens as verifiable JWTs.",
   "params": [

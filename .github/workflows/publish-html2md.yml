@@ -10,7 +10,7 @@ on:
 
 jobs:
   publish:
-    uses: ./.github/workflows/_publish.yml
+    uses: ./.github/workflows/_publish_rs.yml
     with:
       template: html2md
     secrets: inherit

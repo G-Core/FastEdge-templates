@@ -1,5 +1,6 @@
 {
-  "name": "sso-gate-only-auth",
+  "name": "SSO - Gate-Only Auth App",
+  "template_id": 192,
   "api_type": "wasi-http",
   "description": "SSO auth app for the gate-only variant. Handles identity-provider federation and issues signed HS256 session tokens.",
   "params": [

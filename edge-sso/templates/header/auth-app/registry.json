@@ -1,5 +1,6 @@
 {
-  "name": "sso-header-auth",
+  "name": "SSO - Header Auth App",
+  "template_id": 193,
   "api_type": "wasi-http",
   "description": "SSO auth app for the header variant. Handles identity-provider federation, issues signed HS256 session tokens, and injects x-sso-* identity headers upstream.",
   "params": [

@@ -32,11 +32,13 @@ runs:
         TEMPLATE_DIR: ${{ inputs.template_dir }}
       run: |
         echo "name=$(jq -r '.name' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
-        echo "template_id=$(jq -r '.template_id' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
+        echo "template_id=$(jq -r '.template_id // empty' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
         echo "descr=$(jq -r '.description' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
         echo "params=$(jq -c '.params' "$TEMPLATE_DIR/registry.json")" >> "$GITHUB_OUTPUT"
-        {
-          echo 'instructions<<EOF'
-          cat "$TEMPLATE_DIR/instructions.md"
-          echo 'EOF'
-        } >> "$GITHUB_OUTPUT"
+        if [ -f "$TEMPLATE_DIR/instructions.md" ]; then
+          {
+            echo 'instructions<<EOF'
+            cat "$TEMPLATE_DIR/instructions.md"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+        fi
