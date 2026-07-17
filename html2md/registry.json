@@ -1,5 +1,6 @@
 {
-  "name": "html2md",
+  "name": "Transform HTML to Markdown",
+  "template_id": 110,
   "api_type": "proxy-wasm",
   "description": "Transform origin's HTML responses to Markdown format when request header \"Accept\" is equal to \"text/markdown\". Particularly useful for AI Agents.",
   "params": []

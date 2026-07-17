@@ -1,0 +1,75 @@
+name: Publish template
+
+on:
+  workflow_call:
+    inputs:
+      template:
+        description: Template directory / package name to build and publish
+        required: true
+        type: string
+
+jobs:
+  build_and_publish:
+    name: Build and publish ${{ inputs.template }}
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Import credentials from Vault
+        uses: hashicorp/vault-action@v3
+        id: creds
+        with:
+          url: https://puppet-vault.gc.onl
+          token: ${{ secrets.VAULT_TOKEN }}
+          secrets: |
+            secret/project_fastedge/harbor-robot-account username | HARBOR_LOGIN ;
+            secret/project_fastedge/harbor-robot-account password | HARBOR_PASSWORD ;
+            secret/project_fastedge/gcore_api/preprod apitoken | PREPROD_API_KEY ;
+            secret/project_fastedge/gcore_api/preprod hostname | PREPROD_API_URL ;
+            secret/project_fastedge/gcore_api/prod apitoken | PROD_API_KEY ;
+            secret/project_fastedge/gcore_api/prod hostname | PROD_API_URL ;
+
+      - name: Login to Harbor and pull compiler
+        uses: ./.github/setup-harbor-pull
+        with:
+          harbor_login: ${{ steps.creds.outputs.HARBOR_LOGIN }}
+          harbor_password: ${{ steps.creds.outputs.HARBOR_PASSWORD }}
+
+      - name: Build ${{ inputs.template }}
+        uses: ./.github/build-rust
+        with:
+          rust_package: ${{ inputs.template }}
+          working_directory: ${{ inputs.template }}
+          output_path: ${{ inputs.template }}/wasm/${{ inputs.template }}.wasm
+
+      - name: Read ${{ inputs.template }} registry
+        id: registry
+        uses: ./.github/read-template-registry
+        with:
+          template_dir: ${{ inputs.template }}
+
+      - name: Deploy ${{ inputs.template }} to preprod
+        uses: gcore-github-actions/fastedge/deploy-template@v1
+        with:
+          api_key: ${{ steps.creds.outputs.PREPROD_API_KEY }}
+          api_url: ${{ steps.creds.outputs.PREPROD_API_URL }}
+          wasm_file: ${{ inputs.template }}/wasm/${{ inputs.template }}.wasm
+          template_name: ${{ steps.registry.outputs.name }}
+          short_descr: ${{ steps.registry.outputs.descr }}
+          long_descr: ${{ steps.registry.outputs.instructions }}
+          params: ${{ steps.registry.outputs.params }}
+
+      - name: Deploy ${{ inputs.template }} to prod
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: gcore-github-actions/fastedge/deploy-template@v1
+        with:
+          api_key: ${{ steps.creds.outputs.PROD_API_KEY }}
+          api_url: ${{ steps.creds.outputs.PROD_API_URL }}
+          wasm_file: ${{ inputs.template }}/wasm/${{ inputs.template }}.wasm
+          template_name: ${{ steps.registry.outputs.name }}
+          template_id: ${{ steps.registry.outputs.template_id }}
+          short_descr: ${{ steps.registry.outputs.descr }}
+          long_descr: ${{ steps.registry.outputs.instructions }}
+          params: ${{ steps.registry.outputs.params }}

@@ -3,7 +3,7 @@ doc_type: policy
 audience: bot
 lang: en
 tags: ["ai-agents", "rules", "critical", "codex"]
-last_modified: 2026-06-30T00:00:00Z
+last_modified: 2026-07-10T00:00:00Z
 copyright: "© 2026 gcore.com"
 ---
 
@@ -37,6 +37,5 @@ Do not waste tokens on experiments. Do only what is asked.
 
 See `CLAUDE.md` for repo structure and how to navigate to the right template.
 
-When working inside a specific template directory, read that template's own
-`AGENTS.md` and `CLAUDE.md` first — they take precedence over this file for
-all template-specific decisions.
+When working inside a specific template directory, treat it as a standalone project —
+the root context does not apply to template internals.

@@ -44,7 +44,8 @@ const ACCEPT_ENCODING_HEADER: &str = "Accept-Encoding";
 const CONTENT_LENGTH_HEADER: &str = "Content-Length";
 const TRANSFER_ENCODING_HEADER: &str = "Transfer-Encoding";
 const TRANSFER_ENCODING_CHUNKED: &str = "Chunked";
-const MARKDOWN_MIME: &str = "text/markdown";
+const MARKDOWN_MIME_REQ: &str = "text/markdown";
+const MARKDOWN_MIME_RES: &str = "text/markdown; charset=utf-8";
 const HTML_MIME: &str = "text/html";
 
 impl HttpContext for HttpBody {
@@ -55,7 +56,7 @@ impl HttpContext for HttpBody {
             return Action::Continue;
         };
 
-        if content_type_match(&accept, MARKDOWN_MIME) {
+        if content_type_match(&accept, MARKDOWN_MIME_REQ) {
             self.add_http_request_header(CONVERT_FLAG, "markdown");
             self.set_http_request_header(ACCEPT_ENCODING_HEADER, None); // prevent response compression
         }
@@ -64,30 +65,15 @@ impl HttpContext for HttpBody {
     }
 
     fn on_http_response_headers(&mut self, _: usize, _: bool) -> Action {
-        if self.get_http_request_header(CONVERT_FLAG).is_none() {
-            return Action::Continue;
-        };
-
-        if let Some(content_type) = self.get_http_response_header(CONTENT_TYPE_HEADER) {
-            if content_type_match(&content_type, HTML_MIME) {
-                println!("Got HTML to convert: {}", self.get_path());
-
-                self.remove_http_response_header(CONTENT_LENGTH_HEADER);
-                self.set_http_response_header(CONTENT_TYPE_HEADER, Some(MARKDOWN_MIME));
-                self.set_http_response_header(
-                    TRANSFER_ENCODING_HEADER,
-                    Some(TRANSFER_ENCODING_CHUNKED),
-                );
-                self.set_property(vec!["response.md"], Some(b"true"));
-            }
-        }
-
         // use Convert for cache key; merge with any existing Vary header
+        // missing Convert is a distinct value so it won't cause cache misses for requests that don't accept markdown
         if let Some(vary) = self.get_http_response_header("Vary") {
+            // "*" must stand alone per RFC 9110; leave it untouched
+            let is_wildcard = vary.trim() == "*";
             let has_convert = vary
                 .split(',')
                 .any(|v| v.trim().eq_ignore_ascii_case(CONVERT_FLAG));
-            if !has_convert {
+            if !is_wildcard && !has_convert {
                 let new_vary = if vary.is_empty() {
                     CONVERT_FLAG.to_string()
                 } else {
@@ -98,17 +84,38 @@ impl HttpContext for HttpBody {
         } else {
             self.add_http_response_header("Vary", CONVERT_FLAG);
         }
+
+        if self.get_http_request_header(CONVERT_FLAG).is_none() {
+            return Action::Continue;
+        };
+
+        if let Some(content_type) = self.get_http_response_header(CONTENT_TYPE_HEADER) {
+            if content_type_match(&content_type, HTML_MIME) {
+                println!("Got HTML to convert: {}", self.get_path());
+
+                self.remove_http_response_header(CONTENT_LENGTH_HEADER);
+                self.set_http_response_header(CONTENT_TYPE_HEADER, Some(MARKDOWN_MIME_RES));
+                self.set_http_response_header(
+                    TRANSFER_ENCODING_HEADER,
+                    Some(TRANSFER_ENCODING_CHUNKED),
+                );
+                self.set_property(vec!["response.md"], Some(b"true"));
+            }
+        }
+
         Action::Continue
     }
 
     fn on_http_response_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
-        if !end_of_stream {
-            return Action::Pause;
-        }
-
-        // only process HTML
+        // process only when on_http_response_headers has set the convert flag,
+        // otherwise just deliver the body to user
         if self.get_property(vec!["response.md"]).is_none() {
             return Action::Continue;
+        }
+
+        // buffer the entire body before converting to markdown, since the conversion library doesn't support streaming
+        if !end_of_stream {
+            return Action::Pause;
         }
 
         if let Some(body_bytes) = self.get_http_response_body(0, body_size) {

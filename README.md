@@ -16,6 +16,14 @@ HTML-serving origin.
 
 See [`html2md/README.md`](html2md/README.md) for details and the deploy button.
 
+### harden-cookies
+
+Proxy-WASM filter that adds `Secure`, `HttpOnly`, and `SameSite=Strict` attributes
+to targeted `Set-Cookie` response headers. Configured entirely through environment
+variables — no code changes required.
+
+See [`harden-cookies/README.md`](harden-cookies/README.md) for details and the deploy button.
+
 ### edge-sso
 
 Multi-provider SSO bolt-on — an Identity-Aware Proxy that adds login (Google,

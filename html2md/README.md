@@ -17,7 +17,7 @@ When conversion is enabled, the filter:
 - Adds request header `Convert: markdown` (conversion flag for correct caching)
 - Removes request `Accept-Encoding` to avoid compressed origin payloads
 - Removes response `Content-Length`
-- Sets response `Content-Type: text/markdown`
+- Sets response `Content-Type: text/markdown; charset=utf-8`
 - Sets response `Transfer-Encoding: Chunked`
 - Converts response body to Markdown at end of stream
 - Adds `Vary: Convert` (merged with existing `Vary` if present)

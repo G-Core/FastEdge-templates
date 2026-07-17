@@ -1,4 +1,4 @@
-name: Publish html2md
+name: Publish harden-cookies
 
 on:
   workflow_dispatch:
@@ -6,11 +6,11 @@ on:
     branches:
       - main
     paths:
-      - 'html2md/**'
+      - 'harden-cookies/**'
 
 jobs:
   publish:
     uses: ./.github/workflows/_publish.yml
     with:
-      template: html2md
+      template: harden-cookies
     secrets: inherit
