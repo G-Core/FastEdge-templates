@@ -70,7 +70,7 @@ export async function handleFacebookLogin(c: Context): Promise<Response> {
     // Validate redirect before storing it in the signed state cookie.
     const redirect = validateRedirect(c.req.query("redirect"), allowedOrigins);
     console.log(
-      `[facebook] login: raw redirect=${c.req.query("redirect") ?? "<none>"} → stored=${redirect}`,
+      `[facebook] login: redirect=${redirect}`,
     );
 
     const state = generateOAuthState();

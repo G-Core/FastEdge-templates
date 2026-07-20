@@ -4,8 +4,12 @@
  *
  * Output:
  *   SESSION_SIGNING_KEY  — private key as PKCS#8 PEM  → FastEdge secret
+<<<<<<< HEAD
  *   SESSION_PUBLIC_KEY   — public key as JWK JSON      → FastEdge env var (filter)
  *   SESSION_PUBLIC_JWK   — same JWK JSON               → FastEdge env var (auth-app JWKS endpoint)
+=======
+ *   SESSION_PUBLIC_JWK   — public key as JWK JSON      → FastEdge env var (filter + auth-app JWKS endpoint)
+>>>>>>> main
  *
  * Usage:
  *   node scripts/gen-ec-keypair.mjs
@@ -34,18 +38,19 @@ const publicJwkJson = JSON.stringify(publicJwk);
 const dotenv = process.argv.includes("--dotenv");
 
 if (dotenv) {
-  // Single-line PEM (newlines replaced with \n literal) for dotenv
+  // Single-line PEM (newlines replaced with \n literal) for dotenv. Keys are
+  // prefixed the way the templates' .env files and test runners expect them.
   const pemOneLine = pkcs8Pem.replace(/\n/g, "\\n");
-  console.log(`SESSION_SIGNING_KEY=${pemOneLine}`);
-  console.log(`SESSION_PUBLIC_KEY=${publicJwkJson}`);
-  console.log(`SESSION_PUBLIC_JWK=${publicJwkJson}`);
+  console.log(`FASTEDGE_VAR_SECRET_SESSION_SIGNING_KEY=${pemOneLine}`);
+  console.log(`FASTEDGE_VAR_ENV_SESSION_PUBLIC_JWK=${publicJwkJson}`);
 } else {
-  console.log("# ── SESSION_SIGNING_KEY (FastEdge secret — private, keep secure) ──");
+  console.log(
+    "# ── SESSION_SIGNING_KEY (FastEdge secret — private, keep secure) ──",
+  );
   console.log(pkcs8Pem);
   console.log();
-  console.log("# ── SESSION_PUBLIC_KEY (FastEdge env var — filter) ──");
-  console.log(publicJwkJson);
-  console.log();
-  console.log("# ── SESSION_PUBLIC_JWK (FastEdge env var — auth-app JWKS endpoint) ──");
+  console.log(
+    "# ── SESSION_PUBLIC_JWK (FastEdge env var — filter + auth-app JWKS endpoint) ──",
+  );
   console.log(publicJwkJson);
 }

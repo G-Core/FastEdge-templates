@@ -70,7 +70,7 @@ export async function handleMicrosoftLogin(c: Context): Promise<Response> {
     // Validate redirect before storing it in the signed state cookie.
     const redirect = validateRedirect(c.req.query("redirect"), allowedOrigins);
     console.log(
-      `[microsoft] login: raw redirect=${c.req.query("redirect") ?? "<none>"} → stored=${redirect}`,
+      `[microsoft] login: redirect=${redirect}`,
     );
 
     const state = generateOAuthState();
