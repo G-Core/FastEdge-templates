@@ -1,12 +1,37 @@
-name: Publish template
+name: Publish Rust template
+
+# Reusable workflow: build one Rust cdylib to wasm and publish it as a portal
+# template. Simple templates (one dir = one package = one wasm) call this with
+# just `template:`. Templates whose layout doesn't follow that convention
+# (e.g. edge-sso filters living in a shared Cargo workspace) pass explicit
+# paths to override the defaults.
 
 on:
   workflow_call:
     inputs:
       template:
-        description: Template directory / package name to build and publish
+        description: Template name (job label + default for the paths below)
         required: true
         type: string
+      rust_package:
+        description: "Cargo package name (default: template)"
+        required: false
+        type: string
+      working_directory:
+        description: "Dir containing the Cargo project (default: template)"
+        required: false
+        type: string
+      output_path:
+        description: "Built wasm destination (default: <template>/wasm/<template>.wasm)"
+        required: false
+        type: string
+      registry_dir:
+        description: "Dir holding registry.json / instructions.md (default: template)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   build_and_publish:
@@ -40,22 +65,22 @@ jobs:
       - name: Build ${{ inputs.template }}
         uses: ./.github/build-rust
         with:
-          rust_package: ${{ inputs.template }}
-          working_directory: ${{ inputs.template }}
-          output_path: ${{ inputs.template }}/wasm/${{ inputs.template }}.wasm
+          rust_package: ${{ inputs.rust_package || inputs.template }}
+          working_directory: ${{ inputs.working_directory || inputs.template }}
+          output_path: ${{ inputs.output_path || format('{0}/wasm/{0}.wasm', inputs.template) }}
 
       - name: Read ${{ inputs.template }} registry
         id: registry
         uses: ./.github/read-template-registry
         with:
-          template_dir: ${{ inputs.template }}
+          template_dir: ${{ inputs.registry_dir || inputs.template }}
 
       - name: Deploy ${{ inputs.template }} to preprod
         uses: gcore-github-actions/fastedge/deploy-template@v1
         with:
           api_key: ${{ steps.creds.outputs.PREPROD_API_KEY }}
           api_url: ${{ steps.creds.outputs.PREPROD_API_URL }}
-          wasm_file: ${{ inputs.template }}/wasm/${{ inputs.template }}.wasm
+          wasm_file: ${{ inputs.output_path || format('{0}/wasm/{0}.wasm', inputs.template) }}
           template_name: ${{ steps.registry.outputs.name }}
           short_descr: ${{ steps.registry.outputs.descr }}
           long_descr: ${{ steps.registry.outputs.instructions }}
@@ -67,7 +92,7 @@ jobs:
         with:
           api_key: ${{ steps.creds.outputs.PROD_API_KEY }}
           api_url: ${{ steps.creds.outputs.PROD_API_URL }}
-          wasm_file: ${{ inputs.template }}/wasm/${{ inputs.template }}.wasm
+          wasm_file: ${{ inputs.output_path || format('{0}/wasm/{0}.wasm', inputs.template) }}
           template_name: ${{ steps.registry.outputs.name }}
           template_id: ${{ steps.registry.outputs.template_id }}
           short_descr: ${{ steps.registry.outputs.descr }}

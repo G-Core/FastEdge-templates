@@ -1,0 +1,50 @@
+{
+  "name": "SSO - Cookie CDN Filter",
+  "template_id": 194,
+  "api_type": "proxy-wasm",
+  "description": "SSO CDN filter for the cookie variant. Verifies ES256 session tokens using the public JWK on every request and redirects unauthenticated users.",
+  "params": [
+    {
+      "name": "SESSION_PUBLIC_JWK",
+      "data_type": "string",
+      "mandatory": true,
+      "descr": "Public half of the EC P-256 keypair as JWK JSON. The CDN filter uses this to verify session tokens. Must be the exact public counterpart of SESSION_SIGNING_KEY.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_AUDIENCE",
+      "data_type": "string",
+      "mandatory": true,
+      "descr": "Token audience claim (e.g. https://app.example.com). The filter rejects any token whose aud doesn't match. Must be identical across both apps — mismatch causes all requests to redirect to login.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_ISSUER",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Token issuer claim. Validated only when set on both apps. If set, must be identical across both apps.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SESSION_COOKIE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Name of the cookie carrying the session token. Default: sso_session. Must be identical across both apps — mismatch means the filter never sees the cookie the auth-app sets.",
+      "metadata": "{\"default_value\":\"sso_session\"}"
+    },
+    {
+      "name": "AUTH_PREFIX",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Path prefix the CDN filter bypasses so the login flow isn't gated. Default: /auth. Must align with the CDN rule that routes this prefix to the auth-app.",
+      "metadata": "{\"default_value\":\"/auth\"}"
+    },
+    {
+      "name": "LOGIN_PAGE_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Where the filter redirects unauthenticated users. Default: AUTH_PREFIX/ (the built-in provider chooser). Only set this to override with a custom login page.",
+      "metadata": "{}"
+    }
+  ]
+}

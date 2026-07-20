@@ -1,0 +1,90 @@
+name: Test edge-sso
+
+on:
+  pull_request:
+    paths:
+      - "edge-sso/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and test edge-sso templates
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Import credentials from Vault
+        uses: hashicorp/vault-action@v3
+        id: creds
+        with:
+          url: https://puppet-vault.gc.onl
+          token: ${{ secrets.VAULT_TOKEN }}
+          secrets: |
+            secret/project_fastedge/harbor-robot-account username | HARBOR_LOGIN ;
+            secret/project_fastedge/harbor-robot-account password | HARBOR_PASSWORD ;
+
+      - name: Login to Harbor and pull compiler
+        uses: ./.github/setup-harbor-pull
+        with:
+          harbor_login: ${{ steps.creds.outputs.HARBOR_LOGIN }}
+          harbor_password: ${{ steps.creds.outputs.HARBOR_PASSWORD }}
+
+      - name: Setup Node.js and install dependencies
+        uses: ./.github/setup-node
+        with:
+          working_directory: edge-sso
+
+      # Unit tests (no wasm needed — fast gate before any build)
+      - name: Unit tests
+        working-directory: edge-sso
+        run: pnpm -C templates/cookie/auth-app test:unit
+
+      # Build TS auth-app wasm (all variants; cdn-filters are Rust)
+      - name: Build TS WASM
+        working-directory: edge-sso
+        run: pnpm -r --filter '!*cdn-filter' run --if-present build
+
+      # Build Rust CDN filters
+      - name: Build gate-only CDN filter
+        uses: ./.github/build-rust
+        with:
+          rust_package: sso-guard-gate-only
+          working_directory: edge-sso
+          output_path: edge-sso/templates/gate-only/cdn-filter/wasm/gate_sso_guard.wasm
+
+      - name: Build cookie CDN filter
+        uses: ./.github/build-rust
+        with:
+          rust_package: sso-guard-cookie
+          working_directory: edge-sso
+          output_path: edge-sso/templates/cookie/cdn-filter/wasm/cookie_sso_guard.wasm
+
+      - name: Build header CDN filter
+        uses: ./.github/build-rust
+        with:
+          rust_package: sso-guard-header
+          working_directory: edge-sso
+          output_path: edge-sso/templates/header/cdn-filter/wasm/headers_sso_guard.wasm
+
+      # Integration, filter, and e2e tests (require compiled wasm)
+      - name: Integration tests
+        working-directory: edge-sso
+        run: |
+          pnpm -C templates/cookie/auth-app test
+          pnpm -C templates/gate-only/auth-app test
+          pnpm -C templates/header/auth-app test
+
+      - name: Filter tests
+        working-directory: edge-sso
+        run: |
+          pnpm -C templates/cookie/cdn-filter test
+          pnpm -C templates/header/cdn-filter test
+
+      - name: E2E tests
+        working-directory: edge-sso
+        run: pnpm -C templates/cookie/auth-app test:e2e
