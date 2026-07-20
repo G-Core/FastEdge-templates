@@ -173,7 +173,9 @@ await suite(
         if (!target.startsWith("/private/resource")) {
           throw new Error(`expected relative path target, got '${target}'`);
         }
-        if (target.includes("https://") || target.includes("cdn.example.com")) {
+        const hasScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(target);
+        const parsedTarget = new URL(target, "https://base.invalid");
+        if (hasScheme || parsedTarget.hostname === "cdn.example.com") {
           throw new Error(`redirect target leaked absolute URL/host: '${target}'`);
         }
       },
