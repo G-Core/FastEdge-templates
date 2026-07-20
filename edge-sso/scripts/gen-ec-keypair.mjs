@@ -8,7 +8,7 @@
  *
  * Usage:
  *   node scripts/gen-ec-keypair.mjs
- *   node scripts/gen-ec-keypair.mjs --dotenv   # emit .env-compatible lines
+ *   node scripts/gen-ec-keypair.mjs --dotenv   # emi .env-compatible lines
  */
 
 const { subtle } = globalThis.crypto;

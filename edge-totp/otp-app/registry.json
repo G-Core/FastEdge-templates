@@ -1,0 +1,218 @@
+{
+  "name": "TOTP - Challenge-Verify App",
+  "api_type": "wasi-http",
+  "template_id": 190,
+  "description": "Edge TOTP MFA bolt-on. Hosts the OTP challenge/verify UI and enrolment flow in front of an existing login. Pairs with totp-filter which enforces the mfa_session cookie on CDN resources.",
+  "params": [
+    {
+      "name": "MFA_SESSION_KEY",
+      "data_type": "secret",
+      "mandatory": true,
+      "descr": "HS256 key used to sign the mfa_session JWT. Must be set on both totp-app (signs) and totp-filter (verifies) with the same value. Use a random string of 32+ bytes.",
+      "metadata": "{}"
+    },
+    {
+      "name": "HANDOFF_KEY",
+      "data_type": "secret",
+      "mandatory": true,
+      "descr": "HS256 key shared between this app and the customer origin. The origin signs a short-lived handoff ticket after a successful password check; this app verifies it on /challenge and /verify.",
+      "metadata": "{}"
+    },
+    {
+      "name": "KV_STORE_NAME",
+      "data_type": "string",
+      "mandatory": true,
+      "descr": "Name of the Gcore KV store that holds TOTP seeds. Create the store in the Gcore portal and pass its name here.",
+      "metadata": "{}"
+    },
+    {
+      "name": "KV_STORE_ID",
+      "data_type": "string",
+      "mandatory": true,
+      "descr": "Numeric Gcore KV store ID (from the portal). Used by the /enroll endpoint to write seeds via the Gcore KV REST API.",
+      "metadata": "{}"
+    },
+    {
+      "name": "ENROLL_API_KEY",
+      "data_type": "secret",
+      "mandatory": true,
+      "descr": "Bearer token that gates the POST /auth/totp/enroll endpoint. Pass it as Authorization: Bearer <key> from your backend when provisioning TOTP seeds.",
+      "metadata": "{}"
+    },
+    {
+      "name": "GCORE_API_TOKEN",
+      "data_type": "secret",
+      "mandatory": true,
+      "descr": "Gcore API token with KV write access. Used by /enroll to write seeds. Obtain from the Gcore portal under API Tokens.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MFA_AUDIENCE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Audience claim embedded in the mfa_session token (e.g. https://app.example.com). Required when pairing with totp-filter — the filter refuses every session unless its MFA_AUDIENCE matches. Must be identical on both apps.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MFA_ISSUER",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Issuer claim embedded in the mfa_session token. Validated by totp-filter only when set on both apps. Defense-in-depth.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MFA_SESSION_COOKIE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Name of the cookie carrying the mfa_session token. Must be identical on both totp-app and totp-filter. Default: mfa_session.",
+      "metadata": "{\"default_value\":\"mfa_session\"}"
+    },
+    {
+      "name": "MFA_SESSION_TTL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "How long the mfa_session cookie lives, in seconds. Default: 28800 (8 hours).",
+      "metadata": "{\"default_value\":\"28800\"}"
+    },
+    {
+      "name": "KV_KEY_PREFIX",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Prefix prepended to userId for KV keys. Override only to share one KV store across multiple apps without key collisions. Default: totp:",
+      "metadata": "{\"default_value\":\"totp:\"}"
+    },
+    {
+      "name": "ALLOW_SELF_ENROLLMENT",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Whether an unenrolled user may self-enroll on first login via /auth/totp/activate. Default: true. Set to false for admin-provisioned deployments.",
+      "metadata": "{\"default_value\":\"true\"}"
+    },
+    {
+      "name": "GCORE_API_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Gcore API base URL. Default: https://api.gcore.com. Override only in non-standard environments.",
+      "metadata": "{\"default_value\":\"https://api.gcore.com\"}"
+    },
+    {
+      "name": "AUTH_PREFIX",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Path prefix for all totp-app routes. Must match the CDN path rule that routes traffic to this app and totp-filter's AUTH_PREFIX. Default: /auth/totp",
+      "metadata": "{\"default_value\":\"/auth/totp\"}"
+    },
+    {
+      "name": "TOTP_ISSUER",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Issuer name shown in the user's authenticator app (Google Authenticator, Authy, etc.) next to the account. Default: TOTP",
+      "metadata": "{\"default_value\":\"TOTP\"}"
+    },
+    {
+      "name": "TOTP_DIGITS",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Number of digits in the OTP code. Default: 6. Most authenticators support 6 only.",
+      "metadata": "{\"default_value\":\"6\"}"
+    },
+    {
+      "name": "TOTP_PERIOD",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Time step in seconds. Default: 30. Must match the authenticator's setting.",
+      "metadata": "{\"default_value\":\"30\"}"
+    },
+    {
+      "name": "TOTP_ALGORITHM",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "HMAC algorithm for TOTP. Default: SHA1. RFC 6238 mandates SHA1; most authenticators only support SHA1.",
+      "metadata": "{\"default_value\":\"SHA1\"}"
+    },
+    {
+      "name": "TOTP_DRIFT",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Clock-drift tolerance in ±steps. Default: 1 (accepts current ±one step). Increase only for deployments with known clock skew.",
+      "metadata": "{\"default_value\":\"1\"}"
+    },
+    {
+      "name": "TICKET_TTL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "How long the origin-signed handoff ticket is valid, in seconds. Default: 90. Should be short — the user is mid-login.",
+      "metadata": "{\"default_value\":\"90\"}"
+    },
+    {
+      "name": "MAX_ATTEMPTS",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Max failed /verify attempts per user per 5-minute window before locking out. Default: 5. PoP-local — defense-in-depth only.",
+      "metadata": "{\"default_value\":\"5\"}"
+    },
+    {
+      "name": "TOTP_BRAND_NAME",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Brand name appended to the page title and used as the logo alt text on the hosted challenge/enrol pages.",
+      "metadata": "{}"
+    },
+    {
+      "name": "TOTP_BRAND_LOGO_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Logo image shown above the OTP form on the hosted pages. Recommended max: 48×180 px.",
+      "metadata": "{}"
+    },
+    {
+      "name": "TOTP_BRAND_FAVICON_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Favicon injected as <link rel=\"icon\"> on the hosted pages.",
+      "metadata": "{}"
+    },
+    {
+      "name": "TOTP_BRAND_BUTTON_COLOR",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Button background and input focus-ring colour on the hosted pages. Default: #0066cc.",
+      "metadata": "{\"default_value\":\"#0066cc\"}"
+    },
+    {
+      "name": "TOTP_BRAND_BUTTON_HOVER_COLOR",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Explicit button hover background on the hosted pages. If unset, the button dims slightly on hover.",
+      "metadata": "{}"
+    },
+    {
+      "name": "MFA_PROOF_SIGNING_KEY",
+      "data_type": "secret",
+      "mandatory": false,
+      "descr": "Profile B only. EC P-256 private key (PKCS#8 PEM) for signing the one-time ES256 proof cookie. Generate with: node scripts/gen-ec-keypair.mjs",
+      "metadata": "{}"
+    },
+    {
+      "name": "MFA_PROOF_PUBLIC_JWK",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Profile B only. Public counterpart of MFA_PROOF_SIGNING_KEY as JWK JSON. Served at GET /auth/totp/.well-known/jwks.json for the origin to verify the proof.",
+      "metadata": "{}"
+    },
+    {
+      "name": "PROOF_TTL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Profile B only. How long the one-time ES256 proof cookie is valid, in seconds. Default: 90. Short TTL is intentional — the proof is single-use.",
+      "metadata": "{\"default_value\":\"90\"}"
+    },
+    {
+      "name": "MFA_PROOF_COOKIE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Profile B only. Name of the one-time ES256 proof cookie. Default: mfa_proof.",
+      "metadata": "{\"default_value\":\"mfa_proof\"}"
+    }
+  ]
+}

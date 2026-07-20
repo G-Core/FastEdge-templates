@@ -1,0 +1,16 @@
+{
+  "name": "otp-filter",
+  "description": "Edge MFA enforcement filter (Rust proxy-wasm) — black-box wasm tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cargo build --release",
+    "test": "FASTEDGE_RUN_PATH=./node_modules/@gcoredev/fastedge-test/dist/fastedge-cli/fastedge-run-linux-x64 node --import=tsx/esm tests/filter.test.ts"
+  },
+  "devDependencies": {
+    "@gcoredev/fastedge-test": "catalog:",
+    "jose": "catalog:",
+    "tsx": "catalog:"
+  }
+}

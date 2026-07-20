@@ -1,0 +1,21 @@
+{
+  "name": "otp-app",
+  "description": "Edge TOTP MFA bolt-on for FastEdge",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "npx fastedge-build --input ./src/index.ts --output ./dist/totp-app.wasm --tsconfig ./tsconfig.json",
+    "test": "node --import=tsx/esm --test tests/unit/*.test.ts"
+  },
+  "devDependencies": {
+    "@gcoredev/fastedge-sdk-js": "catalog:",
+    "@gcoredev/fastedge-test": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "hono": "^4.9.8",
+    "jose": "catalog:",
+    "uqr": "^0.1.3"
+  }
+}

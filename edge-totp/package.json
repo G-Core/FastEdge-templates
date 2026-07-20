@@ -1,0 +1,16 @@
+{
+  "name": "totp",
+  "private": true,
+  "scripts": {
+    "build": "npm-run-all -s build:app build:filter copy:wasm",
+    "build:app": "pnpm --filter otp-app build",
+    "build:filter": "pnpm --filter otp-filter build",
+    "test": "npm-run-all -p test:app test:filter",
+    "test:app": "pnpm --filter otp-app test",
+    "test:filter": "pnpm build:filter && pnpm --filter otp-filter test",
+    "copy:wasm": "mkdir -p wasm && mv otp-app/dist/totp-app.wasm wasm/totp-app.wasm && cp otp-filter/target/wasm32-wasip1/release/totp_filter.wasm wasm/totp-filter.wasm"
+  },
+  "devDependencies": {
+    "npm-run-all2": "^9.0.2"
+  }
+}

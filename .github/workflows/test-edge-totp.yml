@@ -1,0 +1,63 @@
+name: Test edge-totp
+
+on:
+  pull_request:
+    paths:
+      - "edge-totp/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and test edge-totp
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Import credentials from Vault
+        uses: hashicorp/vault-action@v3
+        id: creds
+        with:
+          url: https://puppet-vault.gc.onl
+          token: ${{ secrets.VAULT_TOKEN }}
+          secrets: |
+            secret/project_fastedge/harbor-robot-account username | HARBOR_LOGIN ;
+            secret/project_fastedge/harbor-robot-account password | HARBOR_PASSWORD ;
+
+      - name: Login to Harbor and pull compiler
+        uses: ./.github/setup-harbor-pull
+        with:
+          harbor_login: ${{ steps.creds.outputs.HARBOR_LOGIN }}
+          harbor_password: ${{ steps.creds.outputs.HARBOR_PASSWORD }}
+
+      - name: Setup Node.js and install dependencies
+        uses: ./.github/setup-node
+        with:
+          working_directory: edge-totp
+
+      # Unit tests (no wasm needed — fast gate before any build)
+      - name: Unit tests
+        working-directory: edge-totp
+        run: pnpm -C otp-app test
+
+      # Build TS app wasm
+      - name: Build TS WASM
+        working-directory: edge-totp
+        run: pnpm -C otp-app build
+
+      # Build Rust filter
+      - name: Build Rust filter
+        uses: ./.github/build-rust
+        with:
+          rust_package: totp-filter
+          working_directory: edge-totp/otp-filter
+          output_path: edge-totp/otp-filter/wasm/totp-filter.wasm
+
+      # Filter tests (require compiled wasm)
+      - name: Filter tests
+        working-directory: edge-totp
+        run: pnpm -C otp-filter test
