@@ -8,7 +8,7 @@ Read `AGENTS.md` for company-wide agent rules. These are mandatory and override 
 
 ## Project Goal
 
-A **sellable edge SSO bolt-on** for Gcore FastEdge — an Identity-Aware Proxy (forward-auth) in the spirit of Cloudflare Access. A customer puts our apps in front of their existing site to add SSO (Google, GitHub, Microsoft, Facebook, and SAML) without rewriting their backend. Shipped as **three templates** on the identity-delivery axis — **gate-only** (allow/deny), **cookie** (verifiable JWT the origin checks), **header** (signed `X-Forwarded-User` injected upstream) — over a shared `core/`.
+A **sellable edge SSO bolt-on** for Gcore FastEdge — an Identity-Aware Proxy (forward-auth) in the spirit of Cloudflare Access. A customer puts our apps in front of their existing site to add SSO (Google, GitHub, Microsoft, Facebook, and SAML) without rewriting their backend. Shipped as **three templates** on the identity-delivery axis — **gate-only** (allow/deny), **cookie** (verifiable JWT the origin checks), **header** (signed `x-sso-*` headers injected upstream) — over a shared `core/`.
 
 > **Read `context/INDEX.md` first** — it is the discovery hub and current state. Then `context/architecture/overview.md` for the authoritative design (variants, repo structure, config model, signing strategy).
 
