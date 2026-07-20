@@ -1,0 +1,12 @@
+[package]
+name = "sso-guard-header"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+sso-guard = { path = "../../../core/filter", default-features = false, features = ["strip-session-cookie", "inject-user-header", "alg-hs256"] }
+proxy-wasm = { workspace = true }
+
+[lib]
+name = "sso_guard_header"
+crate-type = ["cdylib"]

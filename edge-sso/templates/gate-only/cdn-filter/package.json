@@ -1,0 +1,9 @@
+{
+  "name": "@sso/gate-only-cdn-filter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cargo build --release && mkdir -p wasm && cp ../../../target/wasm32-wasip1/release/sso_guard_gate_only.wasm wasm/gate_sso_guard.wasm"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "//": "Canonical FastEdge TypeScript config. All TS app/core packages extend this.",
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ES2023"],
+    "types": ["@gcoredev/fastedge-sdk-js"]
+  }
+}

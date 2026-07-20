@@ -8,9 +8,12 @@ on:
     paths:
       - 'harden-cookies/**'
 
+permissions:
+  contents: read
+
 jobs:
   publish:
-    uses: ./.github/workflows/_publish.yml
+    uses: ./.github/workflows/_publish_rs.yml
     with:
       template: harden-cookies
     secrets: inherit
