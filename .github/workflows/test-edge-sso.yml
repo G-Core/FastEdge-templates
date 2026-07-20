@@ -3,8 +3,11 @@ name: Test edge-sso
 on:
   pull_request:
     paths:
-      - 'edge-sso/**'
+      - "edge-sso/**"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:

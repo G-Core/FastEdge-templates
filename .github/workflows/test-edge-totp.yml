@@ -3,8 +3,11 @@ name: Test edge-totp
 on:
   pull_request:
     paths:
-      - 'edge-totp/**'
+      - "edge-totp/**"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:

@@ -8,6 +8,9 @@ on:
     paths:
       - 'harden-cookies/**'
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     uses: ./.github/workflows/_publish_rs.yml

@@ -6,8 +6,11 @@ on:
     branches:
       - main
     paths:
-      - 'edge-sso/core/**'
-      - 'edge-sso/templates/cookie/cdn-filter/**'
+      - "edge-sso/core/**"
+      - "edge-sso/templates/cookie/cdn-filter/**"
+
+permissions:
+  contents: read
 
 jobs:
   publish:

@@ -6,8 +6,11 @@ on:
     branches:
       - main
     paths:
-      - 'edge-sso/core/**'
-      - 'edge-sso/templates/header/auth-app/**'
+      - "edge-sso/core/**"
+      - "edge-sso/templates/header/auth-app/**"
+
+permissions:
+  contents: read
 
 jobs:
   publish:

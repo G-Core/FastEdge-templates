@@ -6,7 +6,10 @@ on:
     branches:
       - main
     paths:
-      - 'edge-totp/otp-filter/**'
+      - "edge-totp/otp-filter/**"
+
+permissions:
+  contents: read
 
 jobs:
   publish:
