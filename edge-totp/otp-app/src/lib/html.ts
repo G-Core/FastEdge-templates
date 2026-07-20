@@ -3,6 +3,16 @@
 // single definition to audit, and the branding chrome can't drift between the
 // two pages.
 
+// Allowlist: hex (#rgb / #rrggbb / #rrggbbaa), CSS named colors (letters only),
+// rgb/rgba/hsl/hsla with numeric args, and CSS custom properties.
+// Rejects anything containing ; : ( ) that would escape the CSS value context.
+const CSS_COLOR_RE =
+  /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(?:rgba?|hsla?)\([\d\s,.%/]+\)|var\(--[\w-]+\))$/;
+
+function safeCssColor(value: string, fallback: string): string {
+  return CSS_COLOR_RE.test(value.trim()) ? value.trim() : fallback;
+}
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -43,9 +53,9 @@ export function brandingChrome(b: Branding, baseTitle: string): Chrome {
     faviconHtml: b.brandFaviconUrl
       ? `<link rel="icon" href="${escapeHtml(b.brandFaviconUrl)}">`
       : "",
-    btnColor: escapeHtml(b.brandButtonColor ?? "#0066cc"),
+    btnColor: safeCssColor(b.brandButtonColor ?? "", "#0066cc"),
     btnHoverCss: b.brandButtonHoverColor
-      ? `background: ${escapeHtml(b.brandButtonHoverColor)};`
+      ? `background: ${safeCssColor(b.brandButtonHoverColor, "#0055aa")};`
       : "filter: brightness(0.88);",
   };
 }

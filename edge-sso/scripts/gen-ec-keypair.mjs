@@ -4,16 +4,11 @@
  *
  * Output:
  *   SESSION_SIGNING_KEY  — private key as PKCS#8 PEM  → FastEdge secret
-<<<<<<< HEAD
- *   SESSION_PUBLIC_KEY   — public key as JWK JSON      → FastEdge env var (filter)
- *   SESSION_PUBLIC_JWK   — same JWK JSON               → FastEdge env var (auth-app JWKS endpoint)
-=======
  *   SESSION_PUBLIC_JWK   — public key as JWK JSON      → FastEdge env var (filter + auth-app JWKS endpoint)
->>>>>>> main
  *
  * Usage:
  *   node scripts/gen-ec-keypair.mjs
- *   node scripts/gen-ec-keypair.mjs --dotenv   # emit .env-compatible lines
+ *   node scripts/gen-ec-keypair.mjs --dotenv   # emi .env-compatible lines
  */
 
 const { subtle } = globalThis.crypto;

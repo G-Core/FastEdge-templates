@@ -99,7 +99,7 @@ The seed is fetched **at verify time** (not held between steps) because `Cache` 
 - Secrets: `getSecret("KEY")` from `fastedge::secret` (request-time only)
 - Env: `getEnv("KEY")` from `fastedge::env` (request-time only)
 - KV (read): `KvStore.open("name").get(key)` from `fastedge::kv` → `ArrayBuffer | null`
-- Cache: `Cache.incr/get/set` from `fastedge::cache` (POP-local, atomic counters, TTL)
+- Cache: `Cache.incr/get/set/exists/expire/delete/getOrSet` from `fastedge::cache` (POP-local, atomic counters, TTL)
 - Outbound fetch: standard `fetch()` available (limited count per invocation)
 - Deploy: HTTP app attached as CDN origin via a path rule (`/auth/totp/*`).
 - **Build/scaffold/test/deploy via the `gcore-fastedge` plugin SKILLS** — they are the intelligence layer; the MCP server (Docker) is just their executor. Do **not** call MCP build tools or `./node_modules/.bin/fastedge-build` directly unless a skill reports its executor is down.
