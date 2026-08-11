@@ -20,7 +20,6 @@ export interface Config {
   mfaProofCookie: string;
   mfaAudience: string | null;
   mfaIssuer: string | null;
-  kvStoreName: string | null;
   kvStoreId: string | null;
   kvKeyPrefix: string;
   gcoreApiUrl: string;
@@ -74,7 +73,6 @@ export function loadConfig(): Config {
     mfaProofCookie: getEnv("MFA_PROOF_COOKIE") ?? "mfa_proof",
     mfaAudience: getEnv("MFA_AUDIENCE") ?? null,
     mfaIssuer: getEnv("MFA_ISSUER") ?? null,
-    kvStoreName: getEnv("KV_STORE_NAME"),
     kvStoreId: getEnv("KV_STORE_ID"),
     kvKeyPrefix: getEnv("KV_KEY_PREFIX") ?? DEFAULT_KEY_PREFIX,
     gcoreApiUrl: getEnv("GCORE_API_URL") ?? "https://api.gcore.com",

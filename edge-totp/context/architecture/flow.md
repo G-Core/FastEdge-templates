@@ -50,7 +50,7 @@ service**.
    a. Verifies the ticket → `userId`, `next`.
    b. **Brute-force guard:** `Cache.incr("fail:"+userId)`; blocks over `MAX_ATTEMPTS`
       within a TTL window. The counter is cleared on a successful verify.
-   c. **Fetches the seed** for `userId` from KV (`KvStore.open(KV_STORE_NAME)
+   c. **Fetches the seed** for `userId` from KV (`KvStore.open("TOTP_USER_SEEDS")
       .get(KV_KEY_PREFIX+userId)`). See "Why fetch at verify time" below.
    d. **Verifies the code:** base32-decode seed → HMAC over the time-step counter
       (`floor(Date.now()/1000 / TOTP_PERIOD)`), checking `±TOTP_DRIFT` steps,

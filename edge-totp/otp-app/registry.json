@@ -19,17 +19,17 @@
       "metadata": "{}"
     },
     {
-      "name": "KV_STORE_NAME",
-      "data_type": "string",
+      "name": "TOTP_USER_SEEDS",
+      "data_type": "store",
       "mandatory": true,
-      "descr": "Name of the Gcore KV store that holds TOTP seeds. Create the store in the Gcore portal and pass its name here.",
+      "descr": "Gcore KV store that holds TOTP seeds. Pick or create it here — this grants the app read access to the store at request time.",
       "metadata": "{}"
     },
     {
       "name": "KV_STORE_ID",
       "data_type": "string",
       "mandatory": true,
-      "descr": "Numeric Gcore KV store ID (from the portal). Used by the /enroll endpoint to write seeds via the Gcore KV REST API.",
+      "descr": "Numeric Gcore KV store ID — must be the same store as TOTP_USER_SEEDS. Used by the /enroll endpoint to write seeds via the Gcore KV REST API (the read binding above is read-only).",
       "metadata": "{}"
     },
     {

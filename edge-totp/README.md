@@ -60,9 +60,10 @@ This is an authentication gate; misconfiguration can make it bypassable. At mini
   to Gcore CDN ingress (IP allowlist / origin auth / tunnel).
 - **Set `MFA_AUDIENCE`** on both apps when the filter is deployed. The filter
   **fail-closes** (refuses every session) if it is unset.
-- **TOTP seeds are stored plaintext-at-rest in KV.** Use a single-tenant,
-  per-customer isolated KV store; scope `GCORE_API_TOKEN` to that one store and treat
-  it as equivalent to every seed it can reach.
+- **TOTP seeds are encrypted at rest in KV**, but still readable in plaintext through
+  the same authorized path this app uses. Use a single-tenant, per-customer isolated
+  KV store; scope `GCORE_API_TOKEN` to that one store and treat it as equivalent to
+  every seed it can reach.
 - **The edge `mfa_session` is short-lived (8h, non-sliding) and not cross-PoP
   revocable.** Understand the accepted residual risks before relying on it.
 - **CDN logs include user identity.** The filter logs the session subject (`sub`)
