@@ -7,11 +7,14 @@ code. That per-user durable state is the whole storage question.
 
 **Storage model = KV only.** The seed lives in a **per-customer, single-tenant KV
 store** (one deployment = one customer, so the store is isolated, not a multi-tenant
-honeypot). Seeds are stored **encrypted at rest** (`encoding: "masked"`) and decrypted
-transparently on read by the `fastedge::kv` SDK — but scope `GCORE_API_TOKEN` to the
-single store and treat KV read access as equivalent to the seeds themselves, since that
-same authorized path still reaches the plaintext seed (see `../security/threat-model.md`
-R4).
+honeypot). Seeds are written with `encoding: "masked"`, which is output suppression on
+the KV REST API, not encryption — a GET against that API (with `GCORE_API_TOKEN` or any
+other caller) always returns a SHA-256 checksum, never the seed. The only code path that
+ever sees a seed in the clear is the app's own `fastedge::kv` binding at verify time
+(`readSeed` in `otp-app/src/seed/kv.ts`), which the REST API cannot reach. Still scope
+`GCORE_API_TOKEN` to the single store: it has **write** access to overwrite any user's
+seed via that same endpoint, which is the actual attack surface (see
+`../security/threat-model.md` R4).
 
 ### KV storage — the seed source
 
