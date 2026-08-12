@@ -96,15 +96,13 @@ function buildApp(authPrefix: string): Hono {
     const account = typeof body.account === "string" ? body.account : userId;
     const force = body.force === true;
 
-    if (!cfg.kvStoreName)
-      return c.json({ error: "KV_STORE_NAME not configured" }, 503);
     if (!cfg.kvStoreId)
       return c.json({ error: "KV_STORE_ID not configured" }, 503);
     if (!secrets.gcoreApiToken)
       return c.json({ error: "GCORE_API_TOKEN not configured" }, 503);
 
     // Guard against silent re-enrollment
-    if (!force && isEnrolled(cfg.kvStoreName, userId, cfg.kvKeyPrefix)) {
+    if (!force && isEnrolled(userId, cfg.kvKeyPrefix)) {
       return c.json(
         { error: "Already enrolled. Set force:true to re-enroll." },
         409,
@@ -148,11 +146,9 @@ function buildApp(authPrefix: string): Hono {
     const claims = await verifyHandoffTicket(ticket, secrets.handoffKey);
     if (!claims) return c.text("Invalid or expired ticket", 400);
 
-    if (!cfg.kvStoreName) return c.text("KV_STORE_NAME not configured", 503);
-
     // Not enrolled: send to self-service activation, or refuse when self-service
     // enrollment is disabled (admin-provisioned deployments).
-    if (!isEnrolled(cfg.kvStoreName, claims.sub, cfg.kvKeyPrefix)) {
+    if (!isEnrolled(claims.sub, cfg.kvKeyPrefix)) {
       if (!cfg.allowSelfEnrollment) {
         return c.text("Not enrolled. Please contact your administrator.", 403);
       }
@@ -194,7 +190,7 @@ function buildApp(authPrefix: string): Hono {
     if (!claims) return c.text("Invalid or expired ticket", 400);
 
     // Already enrolled → skip to challenge
-    if (cfg.kvStoreName && isEnrolled(cfg.kvStoreName, claims.sub, cfg.kvKeyPrefix)) {
+    if (isEnrolled(claims.sub, cfg.kvKeyPrefix)) {
       return c.redirect(
         `${authPrefix}/challenge?t=${encodeURIComponent(ticket)}`,
         303,
@@ -311,7 +307,6 @@ function buildApp(authPrefix: string): Hono {
     }
 
     // Code confirmed — persist seed to KV
-    if (!cfg.kvStoreName) return c.text("KV_STORE_NAME not configured", 503);
     if (!cfg.kvStoreId) return c.text("KV_STORE_ID not configured", 503);
     if (!secrets.gcoreApiToken)
       return c.text("GCORE_API_TOKEN not configured", 503);
@@ -452,8 +447,7 @@ function buildApp(authPrefix: string): Hono {
       );
     }
 
-    if (!cfg.kvStoreName) return c.text("KV_STORE_NAME not configured", 503);
-    const seed = readSeed(cfg.kvStoreName, userId, cfg.kvKeyPrefix);
+    const seed = readSeed(userId, cfg.kvKeyPrefix);
     if (!seed) {
       if (ct.includes("application/json")) {
         return c.json({ error: "User not enrolled" }, 403);

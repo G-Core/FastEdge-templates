@@ -79,16 +79,19 @@ FastEdge:
   multiply the keyspace 10–100×.
 - **R3 — KV revocation lag.** A rotated/deprovisioned seed may still verify briefly at
   some PoPs (eventual consistency). Relevant to offboarding; accepted.
-- **R4 — TOTP seeds are plaintext-at-rest in KV.** The seed is written with
-  `encoding: "plain"` (`otp-app/src/seed/kv.ts`) and read back as-is. The runtime has
-  no `crypto.subtle.encrypt`/`decrypt`/`generateKey`, so the app cannot seal the seed
-  with a key it holds only at request time. **Anyone with KV read access — or the
-  `GCORE_API_TOKEN` — can dump every enrolled seed and mint valid codes for every
-  enrolled user.** **You must:** use a single-tenant, per-customer isolated KV store;
-  scope `GCORE_API_TOKEN` to that one store and treat it as equivalent to every seed it
-  can reach; restrict and rotate KV access accordingly. Protecting the values at rest
-  is a property of the KV store, not this app — enable any at-rest protection the store
-  offers.
+- **R4 — TOTP seeds are encrypted at rest in KV (`encoding: "masked"`).** Added to the
+  Gcore KV write API specifically for this template, since the runtime has no
+  `crypto.subtle.encrypt`/`decrypt`/`generateKey` and this app cannot seal the seed
+  with a key it holds only at request time. Masking is a KV-store-level property: the
+  seed is stored encrypted and the `fastedge::kv` read path (`readSeed` in
+  `otp-app/src/seed/kv.ts`) decrypts it transparently for an authorized reader, so
+  `/verify` still works unmodified. This closes the previous plaintext-at-rest gap (a KV
+  data-browsing UI, logs, or backups no longer expose seeds), but does not remove the
+  underlying trust boundary: anyone with the KV read grant this app holds, or an
+  equivalent `GCORE_API_TOKEN`, can still reach the seed through that same authorized
+  path and mint valid codes for every enrolled user. **You must still:** use a
+  single-tenant, per-customer isolated KV store; scope `GCORE_API_TOKEN` to that one
+  store; restrict and rotate KV access accordingly.
 - **R5 — Enrollment & recovery trust (delegated to the origin).** First enrollment and
   account recovery are only as strong as the password until a second factor is bound
   (trust-on-first-use). totp-app deliberately does **not** perform identity proofing —
