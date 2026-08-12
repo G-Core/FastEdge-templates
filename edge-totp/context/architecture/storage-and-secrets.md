@@ -56,7 +56,7 @@ R4).
 | `MFA_PROOF_PUBLIC_JWK` | — | Pre-computed public JWK JSON for the Profile-B JWKS endpoint. Generated offline (`exportKey` is unavailable in the runtime, so the public JWK is stored here rather than derived at runtime). |
 | `KV_STORE_ID` | — | KV store numeric ID — used for writes via the Gcore KV REST API. Must point at the same store linked via `TOTP_USER_SEEDS` below. |
 | `KV_KEY_PREFIX` | `totp:` | Prefix prepended to userId for KV keys. Default is `DEFAULT_KEY_PREFIX = "totp:"` (single source of truth in `seed/kv.ts`). Override to share one KV store across multiple apps without key collisions. |
-| `GCORE_API_URL` | `https://api.gcore.com` | Gcore API base for KV writes |
+| `GCORE_API_URL` | `https://api.gcore.com` | Gcore API base for KV writes. **Not exposed in the template** — set manually on the deployed app when targeting a non-prod environment (see [Troubleshooting: KV write failures](#troubleshooting-kv-write-failures) below). |
 | `TOTP_BRAND_NAME` | — | Appended to page `<title>` and used as logo `alt` text |
 | `TOTP_BRAND_LOGO_URL` | — | URL of a logo image shown above the form (max 48 × 180 px) |
 | `TOTP_BRAND_FAVICON_URL` | — | URL of a favicon injected as `<link rel="icon">` |
@@ -84,6 +84,41 @@ R4).
 
 Use `dotenv` sync (the `manage`/`live-test` skills sync `fixtures/.env*` to the
 deployed app) — see the FastEdge dotenv docs.
+
+---
+
+## Troubleshooting: KV write failures
+
+**Symptom** — logs from `otp-app/src/seed/kv.ts` containing:
+
+```
+[activate] KV write failed: Error: KV write failed: ...
+[enroll] KV write failed: ...
+```
+
+**Cause** — the app is hitting the wrong Gcore API base URL. The default is
+`https://api.gcore.com`. If the app is deployed in a **preprod or staging
+environment**, the KV write endpoint is different and `GCORE_API_URL` must be
+set manually.
+
+**Fix** — add `GCORE_API_URL` as an environment variable directly on the deployed
+FastEdge app (not via the template — it is intentionally absent from
+`registry.json`). For Gcore preprod:
+
+```json
+{ "GCORE_API_URL": "https://api.preprod.world" }
+```
+
+Set it via the Gcore portal (App → Environment) or with the `manage` skill:
+
+```
+/gcore-fastedge:manage
+```
+
+then sync your `fixtures/.env.preprod` file that contains `GCORE_API_URL=https://api.preprod.world`.
+
+Once set, retry the enroll/activate flow — writes will route to the correct
+environment's KV API.
 
 > **Profile-B keypair:** generate the ES256 keypair with
 > `node otp-app/scripts/gen-ec-keypair.mjs` (add `--dotenv` for `.env`-ready

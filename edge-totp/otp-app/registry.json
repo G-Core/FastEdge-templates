@@ -89,13 +89,6 @@
       "metadata": "{\"default_value\":\"true\"}"
     },
     {
-      "name": "GCORE_API_URL",
-      "data_type": "string",
-      "mandatory": false,
-      "descr": "Gcore API base URL. Default: https://api.gcore.com. Override only in non-standard environments.",
-      "metadata": "{\"default_value\":\"https://api.gcore.com\"}"
-    },
-    {
       "name": "AUTH_PREFIX",
       "data_type": "string",
       "mandatory": false,
