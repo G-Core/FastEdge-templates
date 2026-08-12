@@ -1,0 +1,23 @@
+name: Publish sso-filter
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "edge-sso/cdn-filter/**"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish_rs.yml
+    with:
+      template: sso-filter
+      rust_package: sso-guard
+      working_directory: edge-sso/cdn-filter
+      output_path: edge-sso/cdn-filter/wasm/sso_guard.wasm
+      registry_dir: edge-sso/cdn-filter
+    secrets: inherit

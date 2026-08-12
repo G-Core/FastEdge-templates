@@ -8,18 +8,18 @@ Read `AGENTS.md` for company-wide agent rules. These are mandatory and override 
 
 ## Project Goal
 
-A **sellable edge SSO bolt-on** for Gcore FastEdge — an Identity-Aware Proxy (forward-auth) in the spirit of Cloudflare Access. A customer puts our apps in front of their existing site to add SSO (Google, GitHub, Microsoft, Facebook, and SAML) without rewriting their backend. Shipped as **three templates** on the identity-delivery axis — **gate-only** (allow/deny), **cookie** (verifiable JWT the origin checks), **header** (signed `x-sso-*` headers injected upstream) — over a shared `core/`.
+A **sellable edge SSO bolt-on** for Gcore FastEdge — an Identity-Aware Proxy (forward-auth) in the spirit of Cloudflare Access. A customer puts our apps in front of their existing site to add SSO (Google, GitHub, Microsoft, Facebook, and SAML) without rewriting their backend. One app pair, configured per deployment via a runtime env var, `SSO_VARIANT` — **gate-only** (allow/deny), **cookie** (verifiable JWT the origin checks), **header** (signed `x-sso-*` headers injected upstream).
 
 > **Read `context/INDEX.md` first** — it is the discovery hub and current state. Then `context/architecture/overview.md` for the authoritative design (variants, repo structure, config model, signing strategy).
 
 ## Architecture Overview
 
-> **Structure (as-built):** shared `core/` (`@sso/core` TS federation/session + `@sso/filter` Rust) consumed by thin `templates/<variant>/{auth-app,cdn-filter}` presets. All three variants (gate-only, cookie, header) are complete (see `context/development/testing.md` for the test suites). See `context/architecture/overview.md` for the authoritative design. The per-deployment view below still holds: each deployment is one auth-app + one filter.
+> **Structure (as-built):** flat `auth-app/` (TypeScript/Hono) + `cdn-filter/` (Rust proxy-wasm) — no shared `core/` package, no per-variant template dirs. All three `SSO_VARIANT` values are exercised against the same two wasm binaries (see `context/development/testing.md` for the test suites). See `context/architecture/overview.md` for the authoritative design and `refactor.md` for how/why this moved from three build-time template variants to one runtime-configured pair. The per-deployment view below still holds: each deployment is one auth-app + one filter.
 
 Two FastEdge apps work together **per deployment**:
 
-1. **CDN filter** (Proxy-WASM, Rust — `core/filter` → `templates/*/cdn-filter`) — sits in the CDN proxy layer, verifies the session JWT on every request, redirects unauthenticated users
-2. **HTTP Auth App** (HTTP App, TypeScript/Hono — `core/federation` → `templates/*/auth-app`) — federates to the IdP (SAML / GitHub / Google), issues the session token
+1. **CDN filter** (Proxy-WASM, Rust — `cdn-filter/`) — sits in the CDN proxy layer, verifies the session JWT on every request, redirects unauthenticated users
+2. **HTTP Auth App** (HTTP App, TypeScript/Hono — `auth-app/`) — federates to the IdP (SAML / GitHub / Google), issues the session token
 
 ```
 User → CDN App (check session cookie)
@@ -43,13 +43,13 @@ See `context/` for detailed documentation on each component and design decisions
 |---|---|
 | **Start here — current state, file map** | `context/INDEX.md` |
 | Product shape, variants, repo structure, token contract, signing strategy | `context/architecture/overview.md` |
-| Three delivery templates (gate-only / cookie / header) | `context/architecture/auth-modes.md` |
+| The `SSO_VARIANT` axis (gate-only / cookie / header) | `context/architecture/auth-modes.md` |
 | SAML-specific flow, XML/crypto, security checklist | `context/architecture/saml-flow.md` |
 | Choosing a library for the auth app (WebCrypto vs Node APIs) | `context/architecture/runtime-constraints.md` |
 | Security posture and known limitations (CHECK before touching auth/error/token/redirect) | `context/architecture/security.md` |
 | How a customer wires login into their origin | `context/design/integration.md` |
 | Run or extend the test suite (layout, scripts, shared patterns) | `context/development/testing.md` |
-| Every configuration option (env vars + secrets, with cross-app callouts) | each template's `.env.example` |
+| Every configuration option (env vars + secrets, with cross-app callouts) | each app's `.env.example` (`auth-app/`, `cdn-filter/`) |
 
 ## Key Constraints
 

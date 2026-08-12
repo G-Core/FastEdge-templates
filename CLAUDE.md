@@ -15,7 +15,7 @@ template to adapt it to their needs.
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `html2md/`        | Proxy-WASM filter: converts HTML origin responses to Markdown on `Accept: text/markdown`                                                                  |
 | `harden-cookies/` | Proxy-WASM filter: hardens `Set-Cookie` headers with `Secure`, `HttpOnly`, `SameSite=Strict`                                                              |
-| `edge-sso/`       | Multi-provider SSO bolt-on (Google, GitHub, Microsoft, Facebook, SAML) — three delivery variants: gate-only, cookie, header                               |
+| `edge-sso/`       | Multi-provider SSO bolt-on (Google, GitHub, Microsoft, Facebook, SAML) — auth-app + cdn-filter, identity-delivery mode selected at runtime via `SSO_VARIANT`: gate-only, cookie, header |
 | `edge-totp/`      | Edge TOTP MFA bolt-on — adds RFC 6238 two-factor auth in front of an existing login; HTTP app (otp-app) + Rust proxy-wasm enforcement filter (otp-filter) |
 
 ## Repo Structure

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test:
-    name: Build and test edge-sso templates
+    name: Build and test edge-sso
     runs-on: [self-hosted, ubuntu-22-04, regular]
 
     steps:
@@ -42,49 +42,31 @@ jobs:
       # Unit tests (no wasm needed — fast gate before any build)
       - name: Unit tests
         working-directory: edge-sso
-        run: pnpm -C templates/cookie/auth-app test:unit
+        run: pnpm -C auth-app test:unit
 
-      # Build TS auth-app wasm (all variants; cdn-filters are Rust)
+      # Build TS auth-app wasm (cdn-filter is Rust, built below)
       - name: Build TS WASM
         working-directory: edge-sso
-        run: pnpm -r --filter '!*cdn-filter' run --if-present build
+        run: pnpm -C auth-app build
 
-      # Build Rust CDN filters
-      - name: Build gate-only CDN filter
+      # Build Rust CDN filter — one wasm binary, all three SSO_VARIANT values
+      # are exercised against it at test time (see filter.test.ts)
+      - name: Build CDN filter
         uses: ./.github/build-rust
         with:
-          rust_package: sso-guard-gate-only
-          working_directory: edge-sso
-          output_path: edge-sso/templates/gate-only/cdn-filter/wasm/gate_sso_guard.wasm
+          rust_package: sso-guard
+          working_directory: edge-sso/cdn-filter
+          output_path: edge-sso/cdn-filter/wasm/sso_guard.wasm
 
-      - name: Build cookie CDN filter
-        uses: ./.github/build-rust
-        with:
-          rust_package: sso-guard-cookie
-          working_directory: edge-sso
-          output_path: edge-sso/templates/cookie/cdn-filter/wasm/cookie_sso_guard.wasm
-
-      - name: Build header CDN filter
-        uses: ./.github/build-rust
-        with:
-          rust_package: sso-guard-header
-          working_directory: edge-sso
-          output_path: edge-sso/templates/header/cdn-filter/wasm/headers_sso_guard.wasm
-
-      # Integration, filter, and e2e tests (require compiled wasm)
+      # Integration tests (require compiled wasm; covers all 3 SSO_VARIANT values)
       - name: Integration tests
         working-directory: edge-sso
-        run: |
-          pnpm -C templates/cookie/auth-app test
-          pnpm -C templates/gate-only/auth-app test
-          pnpm -C templates/header/auth-app test
+        run: pnpm -C auth-app test
 
       - name: Filter tests
         working-directory: edge-sso
-        run: |
-          pnpm -C templates/cookie/cdn-filter test
-          pnpm -C templates/header/cdn-filter test
+        run: pnpm -C cdn-filter test
 
       - name: E2E tests
         working-directory: edge-sso
-        run: pnpm -C templates/cookie/auth-app test:e2e
+        run: pnpm -C auth-app test:e2e

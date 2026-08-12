@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Edge SSO bolt-on — shared core + per-variant templates (gate-only / cookie / header)",
+  "description": "Edge SSO bolt-on — auth-app (TypeScript) + cdn-filter (Rust proxy-wasm), variant selected at runtime via SSO_VARIANT",
   "scripts": {
     "build": "pnpm -r run --if-present build",
     "test": "pnpm -r run --if-present test"

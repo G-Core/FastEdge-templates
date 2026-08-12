@@ -85,7 +85,7 @@ All libraries depending on `xml-crypto < 6.0.1` are affected by SAMLStorm, a cri
 
 `crypto.subtle.exportKey` is not implemented in StarlingMonkey. `xmldsigjs.Verify()` calls `reimportKey()` internally which calls `exportKey("spki", key)`. Without a polyfill this throws `Application.crypto.subtle.exportKey is not a function`.
 
-**Fix in `core/federation/saml/response.ts`:**
+**Fix in `auth-app/federation/saml/response.ts`:**
 - Import the IdP public key through the **global `crypto.subtle.importKey("spki", ...)`** (not via `cert.publicKey.export()` which uses `@peculiar/webcrypto`'s engine)
 - At module load, install a polyfill for `exportKey` that stores SPKI bytes in a WeakMap keyed by the CryptoKey, then returns them when `exportKey("spki", key)` is called
 - Covered by `saml-response.test.ts` "StarlingMonkey polyfill" test case
