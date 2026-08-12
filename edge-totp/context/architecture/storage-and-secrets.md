@@ -89,12 +89,10 @@ deployed app) — see the FastEdge dotenv docs.
 
 ## Troubleshooting: KV write failures
 
-**Symptom** — logs from `otp-app/src/seed/kv.ts` containing:
+**Symptom** — logs from `otp-app/src/index.ts` containing:
 
-```
-[activate] KV write failed: Error: KV write failed: ...
-[enroll] KV write failed: ...
-```
+    [activate] KV write failed: Error: KV write failed: ...
+    [enroll] KV write failed: ...
 
 **Cause** — the app is hitting the wrong Gcore API base URL. The default is
 `https://api.gcore.com`. If the app is deployed in a **preprod or staging
