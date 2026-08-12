@@ -28,11 +28,12 @@ See [`harden-cookies/README.md`](harden-cookies/README.md) for details and the d
 
 Multi-provider SSO bolt-on — an Identity-Aware Proxy that adds login (Google,
 GitHub, Microsoft, Facebook, SAML) to any existing site without changing the
-backend. Comes in three delivery variants:
+backend. One app pair, with the identity-delivery mode selected at runtime
+via `SSO_VARIANT`:
 
 - **gate-only** — allow/deny at the edge
 - **cookie** — issues a verifiable JWT the origin can inspect
-- **header** — injects a signed `X-Forwarded-User` header upstream
+- **header** — injects signed `x-sso-*` identity headers upstream
 
 See [`edge-sso/README.md`](edge-sso/README.md) for details.
 

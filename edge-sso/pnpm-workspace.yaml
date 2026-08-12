@@ -1,6 +1,6 @@
 packages:
-  - core
-  - templates/*/*
+  - auth-app
+  - cdn-filter
 
 # Single source of truth for shared dependency versions. Packages reference these
 # with the "catalog:" specifier instead of pinning their own version.

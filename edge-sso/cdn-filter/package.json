@@ -1,0 +1,15 @@
+{
+  "name": "cdn-filter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cargo build --release && mkdir -p wasm && cp target/wasm32-wasip1/release/sso_guard.wasm wasm/sso_guard.wasm",
+    "test": "node --import=tsx/esm tests/filter.test.ts"
+  },
+  "devDependencies": {
+    "@gcoredev/fastedge-test": "catalog:",
+    "jose": "catalog:",
+    "tsx": "catalog:"
+  }
+}

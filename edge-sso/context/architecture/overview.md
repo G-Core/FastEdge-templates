@@ -25,38 +25,42 @@ Recurring question: could the OAuth/redirect logic fold into the filter so custo
 
 **The split also gives "just OAuth, enforce at origin" for free** — a customer who wants only federation deploys the auth-app alone and enforces on their own backend. Merging would destroy that composability.
 
-## Repo structure — monorepo, `core/` + `templates/`
+## Repo structure — one app pair, flat
 
 ```
-saml-app/
-├── core/
-│   ├── federation/               # TypeScript package (@sso/core) — runs in the auth-app
+edge-sso/
+├── auth-app/
+│   ├── federation/                # providers/, app.tsx, chooser.tsx, config.ts, saml/
 │   │   ├── providers/            # google, github, microsoft, facebook, saml/ (+ common.ts: PKCE, signed state)
 │   │   ├── app.tsx               # createAuthApp — mounts the /auth/** Hono router
 │   │   ├── chooser.tsx           # provider chooser (renders enabled providers dynamically)
 │   │   └── config.ts             # runtime config resolution from env/secrets
 │   ├── session/
 │   │   └── token.ts              # mint/verify; HS256 (gate/header) and ES256 (cookie)
-│   └── filter/                   # Rust filter lib
-├── templates/
-│   ├── gate-only/   { auth-app/ , cdn-filter/ }
-│   ├── cookie/      { auth-app/ , cdn-filter/ }
-│   └── header/      { auth-app/ , cdn-filter/ }
+│   ├── util/                     # bytes, env helpers
+│   └── server.tsx                # reads SSO_VARIANT, calls createAuthApp
+├── cdn-filter/
+│   └── src/lib.rs                # Variant enum + guard logic + proxy_wasm::main!
 └── context/
 ```
 
-### `core/` is two libraries, one per runtime
+There used to be a `core/` package shared across three separate template
+directories (one per variant). With variant selection now a runtime config
+value (`SSO_VARIANT`) instead of a build-time choice, there's only one
+`auth-app` and one `cdn-filter` — so `core/` was folded directly into them
+(see "Build-time vs runtime split" below for why the variant moved to
+runtime).
 
-The auth-app (TS) and the filter (Rust) run in different runtimes and **cannot share source**:
+### auth-app and cdn-filter still can't share source
 
-1. **`core/federation/` + `core/session/`** — TypeScript package consumed by every template's auth-app. Mints the token. Future providers land here only — the filter is provider-agnostic.
-2. **`core/filter/`** — Rust library consumed by every template's cdn-filter. Verifies the token, redirects, (header variant) injects.
-
-They share only the **token contract** (below), implemented once on each side: TS mints, Rust verifies.
+They run in different runtimes — HTTP-WASM/StarlingMonkey (TypeScript) vs
+proxy-WASM (Rust) — so despite living in the same repo they still **cannot
+share source**. They share only the **token contract** (below), implemented
+once on each side: TS mints, Rust verifies.
 
 ## Token contract
 
-Standard JWT. **Algorithm is per-variant:** gate-only / header sign **HS256** with `SESSION_SECRET`; the **cookie** variant signs **ES256** with `SESSION_SIGNING_KEY` (a PKCS#8 EC private key) and publishes the public half via JWKS (see signing strategy below). Default cookie `sso_session` (configurable via `SESSION_COOKIE`).
+Standard JWT. **Algorithm is per `SSO_VARIANT`:** gate-only / header sign **HS256** with `SESSION_SECRET`; **cookie** signs **ES256** with `SESSION_SIGNING_KEY` (a PKCS#8 EC private key) and publishes the public half via JWKS (see signing strategy below). Default cookie `sso_session` (configurable via `SESSION_COOKIE`).
 
 ```
 header  = { alg: "HS256" | "ES256", typ: "JWT", kid? }
@@ -71,7 +75,7 @@ payload = { sub, iat, exp, aud, iss?, email?, name?, picture?, given_name?, fami
 
 **HS256 (shared secret) — gate-only / header.** Each customer deploys their **own** app pair per CDN resource — issuer + all verifiers belong to **one trust domain**, so a shared secret is the zero-friction choice. The filter verifies HS256 against `SESSION_SECRET`.
 
-**ES256 + JWKS — cookie variant.** The cookie variant signs ES256 so the customer's public origin can verify via a published JWKS endpoint and never holds a forge-capable secret. The auth-app signs ES256 with `SESSION_SIGNING_KEY` (`core/session/token.ts` + `key.ts`) and serves the public JWK at `GET /auth/.well-known/jwks.json` (`core/federation/app.tsx`, cookie variant only, gated on `SESSION_PUBLIC_JWK`, public members only); the Rust filter is ES256-only and verifies against `SESSION_PUBLIC_JWK` (algorithm pinned at compile time). An origin verifies the cookie itself via `createRemoteJWKSet` against the JWKS URL.
+**ES256 + JWKS — cookie variant.** The cookie variant signs ES256 so the customer's public origin can verify via a published JWKS endpoint and never holds a forge-capable secret. The auth-app signs ES256 with `SESSION_SIGNING_KEY` (`auth-app/session/token.ts` + `key.ts`) and serves the public JWK at `GET /auth/.well-known/jwks.json` (`auth-app/federation/app.tsx`, cookie variant only, gated on `SESSION_PUBLIC_JWK`, public members only); the Rust filter accepts ES256 only when `SSO_VARIANT=cookie` (algorithm pinned per variant at runtime — see `architecture/security.md`). An origin verifies the cookie itself via `createRemoteJWKSet` against the JWKS URL.
 
 **StarlingMonkey constraint (the reason for the offline-key design):** `crypto.subtle` supports ECDSA `sign`/`verify` but **not** `generateKey`/`exportKey` — so the keypair is generated offline (`scripts/gen-ec-keypair.mjs`), the private key stored as a PKCS#8 secret (`SESSION_SIGNING_KEY`), and the pre-computed public JWK served from `SESSION_PUBLIC_JWK`. `jose` handles the signing.
 
@@ -82,12 +86,18 @@ payload = { sub, iat, exp, aud, iss?, email?, name?, picture?, given_name?, fami
 - **Secrets** (`getSecret`) — credentials and signing keys: `*_CLIENT_SECRET`, `SESSION_SECRET`, `SESSION_SIGNING_KEY` (cookie), `IDP_CERT`.
 - **Env vars** (`getEnv` / `fastedge::env`) — non-sensitive selectors: `SSO_PROVIDERS`, `SSO_CLAIMS`, `SSO_ISSUER`, `SSO_AUDIENCE`, `CANONICAL_HOST`, `SSO_ALLOWED_ORIGINS`, `SESSION_COOKIE`, `SESSION_PUBLIC_JWK` (cookie), per-provider `*_CLIENT_ID`/`*_REDIRECT_URI`, `MICROSOFT_TENANT`/`MICROSOFT_ALLOWED_TENANTS`, SAML `IDP_*`/`SP_*`, and `LOGIN_PAGE_*` branding.
 
-> Each template's `.env.example` is the authoritative, exhaustive list of every option with inline guidance — including which keys must match between an auth-app and its CDN filter.
+> Each app's `.env.example` (`auth-app/.env.example`, `cdn-filter/.env.example`) is the authoritative, exhaustive list of every option with inline guidance — including which keys must match between the auth-app and the CDN filter.
 
-### Build-time vs runtime split
+### Everything is runtime config now — including the variant
 
-- **Build-time** (defines which template you are): variant (gate/cookie/header), header-injection on/off, JWKS on/off. Fixed per artifact.
-- **Runtime** (set in the Gcore portal, no rebuild): providers, claims, credentials, redirect URL, cookie name, allowed redirect origins. The **same built WASM serves every consumer.**
+Previously the variant (gate/cookie/header), header-injection on/off, and
+JWKS on/off were **build-time** choices — three separate Cargo feature
+combinations produced three separate wasm binaries. That's no longer true:
+`SSO_VARIANT` is a runtime env var like every other setting, and one wasm
+binary (per app) serves all three variants. Set in the Gcore portal, no
+rebuild: `SSO_VARIANT`, providers, claims, credentials, redirect URL, cookie
+name, allowed redirect origins. **The same built WASM serves every
+consumer, regardless of which variant they choose.**
 
 ### Provider enablement
 
@@ -117,9 +127,14 @@ A **per-CDN-resource template**, not multi-tenant SaaS. A consumer assigns an ap
 
 ## Current state
 
-All three templates are built and tested (unit, filter, and integration suites
-green — see `development/testing.md`). The CDN filter is Rust (proxy-WASM); the
-auth-app is TypeScript/Hono. ES256/JWKS for the cookie variant and required,
-fail-closed audience binding are both in place. Known limitations (no token
-revocation, SAML full-POST replay, no IdP Single Logout) are tracked in
-`architecture/security.md`.
+One app pair (`auth-app/` + `cdn-filter/`), built and tested across all three
+`SSO_VARIANT` values against the same wasm binaries (unit, filter, and
+integration suites green — see `development/testing.md`). The CDN filter is
+Rust (proxy-WASM); the auth-app is TypeScript/Hono. ES256/JWKS for the cookie
+variant and required, fail-closed audience binding (and now fail-closed
+`SSO_VARIANT`) are both in place. Known limitations (no token revocation, SAML
+full-POST replay, no IdP Single Logout) are tracked in `architecture/security.md`.
+
+Deferred follow-up (not yet done): the deployment wizard doesn't set
+`SSO_VARIANT` yet — see `edge-sso/refactor.md` for the full history of the
+build-time → runtime merge and what's still open.

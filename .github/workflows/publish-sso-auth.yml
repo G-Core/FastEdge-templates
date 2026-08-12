@@ -1,0 +1,23 @@
+name: Publish sso-auth
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "edge-sso/auth-app/**"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish_js.yml
+    with:
+      template: sso-auth
+      working_directory: edge-sso
+      build_command: pnpm -C auth-app build
+      output_path: edge-sso/auth-app/wasm/auth-app.wasm
+      registry_dir: edge-sso/auth-app
+    secrets: inherit

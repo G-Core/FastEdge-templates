@@ -1,13 +1,13 @@
 # edge-sso — Multi-Provider SSO for FastEdge
 
-Bolt-on Identity-Aware Proxy for Gcore FastEdge. Adds SSO (Google, GitHub, Microsoft, Facebook, SAML) to any existing site without changing the backend. Ships as three variants on the identity-delivery axis.
+Bolt-on Identity-Aware Proxy for Gcore FastEdge. Adds SSO (Google, GitHub, Microsoft, Facebook, SAML) to any existing site without changing the backend. One app pair, configured per deployment via `SSO_VARIANT`.
 
 ## How It Works
 
 Two FastEdge apps work together per deployment:
 
-1. **CDN filter** (Proxy-WASM, Rust) — sits in the CDN proxy layer, verifies the session token on every request, redirects unauthenticated users to the auth app
-2. **Auth app** (HTTP app, TypeScript/Hono) — federates to the identity provider, issues a signed session token, sets it on the client
+1. **CDN filter** (Proxy-WASM, Rust, `cdn-filter/`) — sits in the CDN proxy layer, verifies the session token on every request, redirects unauthenticated users to the auth app
+2. **Auth app** (HTTP app, TypeScript/Hono, `auth-app/`) — federates to the identity provider, issues a signed session token, sets it on the client
 
 ```
 User → CDN resource (filter checks session token)
@@ -19,45 +19,34 @@ User → CDN resource (filter checks session token)
        Back to CDN resource (token set) → origin
 ```
 
+```
+edge-sso/
+├── auth-app/     ← deploy as HTTP App
+└── cdn-filter/   ← deploy as CDN App (Proxy-WASM)
+```
+
 ## Variants
 
-Choose one variant per deployment based on how your origin needs to consume identity:
+`SSO_VARIANT` selects how your origin consumes identity — set the **same**
+value on both apps:
 
-| Variant | Session delivery | Use when |
+| `SSO_VARIANT` | Session delivery | Use when |
 |---|---|---|
 | **gate-only** | Allow/deny only — no identity forwarded | Origin needs no user context, just access control |
 | **cookie** | Signed JWT in a cookie the origin can verify | Origin reads user identity from a verifiable token |
 | **header** | Signed `x-sso-*` identity headers injected upstream | Origin trusts a header from the CDN layer |
 
-Each variant is in `templates/<variant>/` and contains two deployable apps:
-
-```
-templates/
-├── gate-only/
-│   ├── auth-app/     ← deploy as HTTP App
-│   └── cdn-filter/   ← deploy as CDN App (Proxy-WASM)
-├── cookie/
-│   ├── auth-app/
-│   └── cdn-filter/
-└── header/
-    ├── auth-app/
-    └── cdn-filter/
-```
-
-## Shared Core
-
-`core/` contains the shared TypeScript federation and session logic consumed by all three auth-app variants. The Rust CDN filter is in `core/filter/` and compiled into each `cdn-filter` variant.
-
 ## Configuration
 
-Each template's `.env.example` lists all supported environment variables and secrets. Key shared requirements across both apps in a deployment:
+Each app's `.env.example` lists all supported environment variables and secrets. Key shared requirements across both apps in a deployment:
 
-- `SESSION_SECRET` — shared signing secret (gate-only and header variants)
-- `SESSION_SIGNING_KEY` (secret) + `SESSION_PUBLIC_JWK` (env var) — EC key pair (cookie variant)
+- `SSO_VARIANT` — must match on both apps; selects the identity-delivery mode above
+- `SESSION_SECRET` — shared signing secret (required in every variant for OAuth/SAML flow cookies; also signs the session token itself in gate-only/header)
+- `SESSION_SIGNING_KEY` (secret) + `SESSION_PUBLIC_JWK` (env var) — EC key pair (cookie variant's session token)
 - `SSO_AUDIENCE` — must match on both apps; the filter rejects tokens whose `aud` doesn't match
 - `AUTH_PREFIX` — the path prefix reserved for auth routes (default: `/auth`)
 
-See each template's `.env.example` for the full list including per-provider OAuth credentials and SAML IdP settings.
+See each app's `.env.example` for the full list including per-provider OAuth credentials and SAML IdP settings.
 
 ## Providers
 

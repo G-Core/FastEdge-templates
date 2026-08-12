@@ -20,10 +20,12 @@ sessions (see "Audience binding").
 ## Protections in place
 
 ### Session token
-- **Algorithm pinned per variant at compile time.** cookie ⇒ ES256 only; gate-only
-  / header ⇒ HS256 only. The non-selected verification path is not compiled into
-  the filter, so a token cannot choose its own algorithm (no HS256↔ES256 confusion,
-  even if a stray `SESSION_SECRET` is present in a cookie deployment).
+- **Algorithm pinned per `SSO_VARIANT` at runtime.** cookie ⇒ ES256 only; gate-only
+  / header ⇒ HS256 only. The filter looks up its alg from `SSO_VARIANT` before
+  touching the token, so a token cannot choose its own algorithm (no HS256↔ES256
+  confusion, even if a stray `SESSION_SECRET` is present in a cookie deployment).
+  `SSO_VARIANT` itself is required and fail-closed — missing or invalid values
+  refuse every session (same rationale as audience binding below).
 - **Audience binding is required and fail-closed.** The filter rejects every
   session unless `SSO_AUDIENCE` is configured and equals the token's `aud`; the
   auth-app refuses to mint a token without `SSO_AUDIENCE`. This blocks

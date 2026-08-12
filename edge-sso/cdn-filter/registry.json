@@ -1,0 +1,64 @@
+{
+  "name": "SSO - CDN Filter",
+  "template_id": 194,
+  "api_type": "proxy-wasm",
+  "description": "SSO CDN filter. Verifies the session token on every request and redirects unauthenticated users. SSO_VARIANT selects gate-only, cookie, or header behavior.",
+  "params": [
+    {
+      "name": "SSO_VARIANT",
+      "data_type": "string",
+      "mandatory": true,
+      "descr": "Identity-delivery mode: gate-only, cookie, or header. Selects the JWT algorithm, whether the session cookie is stripped, and whether x-sso-* identity headers are injected. Must be identical across both apps.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SESSION_SECRET",
+      "data_type": "secret",
+      "mandatory": false,
+      "descr": "Required when SSO_VARIANT is gate-only or header. HMAC secret verifying HS256 session tokens. Must be identical across both apps.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SESSION_PUBLIC_JWK",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Required when SSO_VARIANT is cookie. Public half of the EC P-256 keypair as JWK JSON, verifying ES256 session tokens. Must be the exact public counterpart of the auth-app's SESSION_SIGNING_KEY.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_AUDIENCE",
+      "data_type": "string",
+      "mandatory": true,
+      "descr": "Token audience claim (e.g. https://app.example.com). The filter rejects any token whose aud doesn't match. Must be identical across both apps — mismatch causes all requests to redirect to login.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SSO_ISSUER",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Token issuer claim. Validated only when set on both apps. If set, must be identical across both apps.",
+      "metadata": "{}"
+    },
+    {
+      "name": "SESSION_COOKIE",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Name of the cookie carrying the session token. Default: sso_session. Must be identical across both apps — mismatch means the filter never sees the cookie the auth-app sets.",
+      "metadata": "{\"default_value\":\"sso_session\"}"
+    },
+    {
+      "name": "AUTH_PREFIX",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Path prefix the CDN filter bypasses so the login flow isn't gated. Default: /auth. Must align with the CDN rule that routes this prefix to the auth-app.",
+      "metadata": "{\"default_value\":\"/auth\"}"
+    },
+    {
+      "name": "LOGIN_PAGE_URL",
+      "data_type": "string",
+      "mandatory": false,
+      "descr": "Where the filter redirects unauthenticated users. Default: AUTH_PREFIX/ (the built-in provider chooser). Only set this to override with a custom login page.",
+      "metadata": "{}"
+    }
+  ]
+}
