@@ -87,6 +87,8 @@ append a random query param to the JWKS URL on every fetch so the cache can't ma
 it against a previously-seen URL. If you build another origin that verifies this
 JWKS endpoint, cache-bust the URL from the start rather than rediscovering this.
 
+## QR rendering — server-side SVG, local only
+
 Enrollment renders the `otpauth://` URI to an inline `<svg>` with `uqr` (pure-JS /
 SVG-string — no canvas or Node built-ins, which the runtime lacks). The URI embeds
 the seed, so it is rendered **locally only and never sent to an external QR service**.
