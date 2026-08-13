@@ -15,24 +15,32 @@ function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// True for [] and for arrays where every item is a plain object with a
+// string `name` — the only shape eligible for by-name array merging.
+function isNameKeyedArray(arr) {
+  return arr.every((item) => isPlainObject(item) && typeof item.name === 'string');
+}
+
 function mergeArraysByName(base, override) {
   const merged = base.map((item) => ({ ...item }));
   for (const overrideItem of override) {
-    if (isPlainObject(overrideItem) && typeof overrideItem.name === 'string') {
-      const i = merged.findIndex((item) => isPlainObject(item) && item.name === overrideItem.name);
-      if (i !== -1) {
-        merged[i] = deepMerge(merged[i], overrideItem);
-        continue;
-      }
+    const i = merged.findIndex((item) => item.name === overrideItem.name);
+    if (i !== -1) {
+      merged[i] = deepMerge(merged[i], overrideItem);
+    } else {
+      merged.push(overrideItem);
     }
-    merged.push(overrideItem);
   }
   return merged;
 }
 
 export function deepMerge(base, override) {
   if (Array.isArray(base) && Array.isArray(override)) {
-    return mergeArraysByName(base, override);
+    // Arrays not keyed by `name` (primitives, or objects without one) have
+    // no sensible item-matching rule — the override replaces wholesale.
+    return isNameKeyedArray(base) && isNameKeyedArray(override)
+      ? mergeArraysByName(base, override)
+      : override;
   }
   if (isPlainObject(base) && isPlainObject(override)) {
     const result = { ...base };
@@ -98,6 +106,12 @@ function selftest() {
 
   // no override -> passthrough
   assert(deepMerge({ a: 1 }, {}).a === 1, 'empty override is a no-op');
+
+  // arrays not keyed by name (primitives, or objects with no `name`) replace wholesale
+  const replaced = deepMerge([1, 2, 3], [4, 5]);
+  assert(replaced.length === 2 && replaced[0] === 4 && replaced[1] === 5, 'primitive array is replaced, not concatenated');
+  const replacedObjs = deepMerge([{ id: 1 }, { id: 2 }], [{ id: 3 }]);
+  assert(replacedObjs.length === 1 && replacedObjs[0].id === 3, 'object array without `name` is replaced, not merged');
 
   console.log('merge-registry selftest: all passed');
 }
