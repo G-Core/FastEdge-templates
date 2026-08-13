@@ -1,0 +1,9 @@
+{
+  "template_id": 732,
+  "params": [
+    {
+      "name": "GCORE_API_URL",
+      "metadata": "{\"default_value\":\"https://api.preprod.world\"}"
+    }
+  ]
+}

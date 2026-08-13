@@ -22,6 +22,18 @@ outputs:
   params:
     description: JSON array of parameter definitions.
     value: ${{ steps.read.outputs.params }}
+  preprod_name:
+    description: Template display name, with registry.preprod.json overrides applied.
+    value: ${{ steps.read.outputs.preprod_name }}
+  preprod_template_id:
+    description: Numeric portal template ID for preprod (only set if overridden).
+    value: ${{ steps.read.outputs.preprod_template_id }}
+  preprod_descr:
+    description: Short one-line description, with registry.preprod.json overrides applied.
+    value: ${{ steps.read.outputs.preprod_descr }}
+  preprod_params:
+    description: JSON array of parameter definitions, with registry.preprod.json overrides applied.
+    value: ${{ steps.read.outputs.preprod_params }}
 
 runs:
   using: composite
@@ -41,4 +53,18 @@ runs:
             cat "$TEMPLATE_DIR/instructions.md"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
+        fi
+
+        MERGED=$(node "${GITHUB_ACTION_PATH}/../scripts/merge-registry.mjs" "$TEMPLATE_DIR")
+        echo "preprod_name=$(echo "$MERGED" | jq -r '.name')" >> "$GITHUB_OUTPUT"
+        echo "preprod_descr=$(echo "$MERGED" | jq -r '.description')" >> "$GITHUB_OUTPUT"
+        echo "preprod_params=$(echo "$MERGED" | jq -c '.params')" >> "$GITHUB_OUTPUT"
+
+        # Only pass a preprod template_id when registry.preprod.json itself
+        # sets one — the merged value otherwise falls back to the prod id,
+        # which must NOT be sent to the preprod deploy step.
+        if [ -f "$TEMPLATE_DIR/registry.preprod.json" ]; then
+          echo "preprod_template_id=$(jq -r '.template_id // empty' "$TEMPLATE_DIR/registry.preprod.json")" >> "$GITHUB_OUTPUT"
+        else
+          echo "preprod_template_id=" >> "$GITHUB_OUTPUT"
         fi
