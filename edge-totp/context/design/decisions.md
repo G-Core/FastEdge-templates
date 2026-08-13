@@ -72,6 +72,21 @@ is for customers wanting longer or origin-controlled sessions.
   `MFA_AUDIENCE` is unset (it cannot otherwise know which tokens are its own); `iss`
   is checked only when set on both sides.
 
+## Platform gotcha — JWKS fetch caching (Profile B)
+
+An origin's `fetch()`/`createRemoteJWKSet()` call to `{AUTH_PREFIX}/.well-known/jwks.json`
+from inside another FastEdge app can hit a cache layer internal to FastEdge's own
+subrequest path — keyed by URL, invisible to the JWKS response's own `Cache-Control`
+header, and **not cleared by a CDN "purge all"** on the resource. Observed while
+building `private-shop`'s `mfa-verify` mode: after rotating `MFA_PROOF_SIGNING_KEY` /
+`MFA_PROOF_PUBLIC_JWK`, the origin's `jwtVerify` kept failing with
+`JWSSignatureVerificationFailed` against a stale key that neither the old nor the new
+env value matched, on a specific edge node, even though direct `curl`s and the app's
+own request-time env lookup both returned the correct key. The only fix that worked:
+append a random query param to the JWKS URL on every fetch so the cache can't match
+it against a previously-seen URL. If you build another origin that verifies this
+JWKS endpoint, cache-bust the URL from the start rather than rediscovering this.
+
 ## QR rendering — server-side SVG, local only
 
 Enrollment renders the `otpauth://` URI to an inline `<svg>` with `uqr` (pure-JS /

@@ -527,6 +527,7 @@ function buildApp(authPrefix: string): Hono {
 
   // --- JWKS: GET {prefix}/.well-known/jwks.json (Profile B) ---
   app.get(`${authPrefix}/.well-known/jwks.json`, (c) => {
+    c.header("Cache-Control", "no-store");
     const publicJwk = getEnv("MFA_PROOF_PUBLIC_JWK");
     if (!publicJwk) return c.json({ error: "JWKS not configured" }, 503);
     try {
