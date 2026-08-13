@@ -69,6 +69,11 @@ jobs:
           working_directory: ${{ inputs.working_directory || inputs.template }}
           output_path: ${{ inputs.output_path || format('{0}/wasm/{0}.wasm', inputs.template) }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.12.0
+
       - name: Read ${{ inputs.template }} registry
         id: registry
         uses: ./.github/read-template-registry
