@@ -81,10 +81,11 @@ jobs:
           api_key: ${{ steps.creds.outputs.PREPROD_API_KEY }}
           api_url: ${{ steps.creds.outputs.PREPROD_API_URL }}
           wasm_file: ${{ inputs.output_path || format('{0}/wasm/{0}.wasm', inputs.template) }}
-          template_name: ${{ steps.registry.outputs.name }}
-          short_descr: ${{ steps.registry.outputs.descr }}
+          template_name: ${{ steps.registry.outputs.preprod_name }}
+          template_id: ${{ steps.registry.outputs.preprod_template_id }}
+          short_descr: ${{ steps.registry.outputs.preprod_descr }}
           long_descr: ${{ steps.registry.outputs.instructions }}
-          params: ${{ steps.registry.outputs.params }}
+          params: ${{ steps.registry.outputs.preprod_params }}
 
       - name: Deploy ${{ inputs.template }} to prod
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
