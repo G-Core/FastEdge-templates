@@ -1,0 +1,27 @@
+name: Validate plugin contract
+
+# Keeps fastedge-plugin-source/manifest.json honest: every template directory (one with a
+# registry.json) must be declared, and the manifest itself must be structurally valid.
+# This is the CI gate that makes "add a template" also mean "the plugin finds out about it".
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate fastedge-plugin-source contract
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check manifest completeness
+        run: bash .github/scripts/check-manifest-completeness.sh .
+
+      - name: Validate contract structure
+        run: bash .github/scripts/validate-contract.sh fastedge-plugin-source/ .

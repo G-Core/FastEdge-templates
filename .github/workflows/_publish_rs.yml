@@ -104,3 +104,23 @@ jobs:
           short_descr: ${{ steps.registry.outputs.descr }}
           long_descr: ${{ steps.registry.outputs.instructions }}
           params: ${{ steps.registry.outputs.params }}
+
+      # Disabled for now — this is the first attempt anywhere in the ecosystem at wiring
+      # ONBOARDING_CHECKLIST.md's Stage 5 automation (no SDK repo sends this dispatch yet
+      # either). Revisit in a future session before enabling; until then the plugin pipeline
+      # only picks up fastedge-templates changes via manual workflow_dispatch.
+      # - name: Notify fastedge-plugin of doc changes
+      #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   run: |
+      #     curl -sf -X POST \
+      #       -H "Accept: application/vnd.github+json" \
+      #       -H "Authorization: Bearer ${{ secrets.FASTEDGE_PLUGIN_DISPATCH_TOKEN }}" \
+      #       https://api.github.com/repos/G-Core/fastedge-plugin/dispatches \
+      #       -d '{
+      #         "event_type": "fastedge-ref-update",
+      #         "client_payload": {
+      #           "source_repo_id": "fastedge-templates",
+      #           "ref": "${{ github.ref_name }}",
+      #           "commit": "${{ github.sha }}"
+      #         }
+      #       }'

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://fastedge-plugin-source/manifest/v1",
+  "repo_id": "fastedge-templates",
+  "version": "1.0.0",
+  "sources": {
+    "catalog": {
+      "files": [
+        "README.md",
+        "html2md/README.md",
+        "harden-cookies/README.md",
+        "edge-sso/README.md",
+        "edge-totp/README.md"
+      ],
+      "required": true,
+      "description": "One-entry-per-template summary — what each bolt-on solves and when to recommend it instead of hand-building. Every template directory with a registry.json must have its README.md listed here (enforced by CI, see .github/workflows/validate-plugin-contract.yml)."
+    },
+    "sso-integration": {
+      "files": [
+        "edge-sso/README.md",
+        "edge-sso/context/design/integration.md"
+      ],
+      "required": false,
+      "description": "Customer-facing contract for wiring edge-sso into an already-deployed origin: hosted login routes, /auth/providers and /auth/branding JSON contracts, login-page customization tiers, redirect validation."
+    },
+    "totp-integration": {
+      "files": [
+        "edge-totp/README.md",
+        "edge-totp/context/integration.md"
+      ],
+      "required": false,
+      "description": "Customer-facing contract for wiring edge-totp into an already-deployed origin: the three origin-side changes, Profile A/B trade-off, HANDOFF_KEY/JWKS shared config, enrollment."
+    }
+  },
+  "target_mapping": {
+    "catalog": {
+      "reference_file": "plugins/gcore-fastedge/skills/fastedge-docs/reference/templates/catalog.md",
+      "section": null
+    },
+    "sso-integration": {
+      "reference_file": "plugins/gcore-fastedge/skills/fastedge-docs/reference/templates/edge-sso-integration.md",
+      "section": null
+    },
+    "totp-integration": {
+      "reference_file": "plugins/gcore-fastedge/skills/fastedge-docs/reference/templates/edge-totp-integration.md",
+      "section": null
+    }
+  },
+  "validation": {
+    "mode": "advisory",
+    "strict_fields": ["catalog"]
+  }
+}
