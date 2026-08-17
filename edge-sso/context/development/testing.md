@@ -60,9 +60,9 @@ pnpm -C cdn-filter build && pnpm -C cdn-filter test
 ## CI
 
 Tests are wired into `.github/workflows/test-edge-sso.yml` and gate deployment
-(via the separate `publish-sso-auth.yml` / `publish-sso-filter.yml` workflows) —
-a push to `edge-sso/**` will not reach the deploy steps unless all test stages
-pass. Run order:
+(via `publish-edge-sso.yml`, which builds and republishes auth-app and
+cdn-filter together as a pair) — a push to `edge-sso/**` will not reach the
+deploy steps unless all test stages pass. Run order:
 
 1. **Unit tests** — no wasm needed, runs immediately after install
 2. **Build** — auth-app TS wasm + cdn-filter Rust wasm compiled (one binary each)

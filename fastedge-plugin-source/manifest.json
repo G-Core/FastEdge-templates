@@ -17,18 +17,23 @@
     "sso-integration": {
       "files": [
         "edge-sso/README.md",
-        "edge-sso/context/design/integration.md"
+        "edge-sso/context/design/integration.md",
+        "edge-sso/context/architecture/auth-modes.md",
+        "edge-sso/context/architecture/overview.md",
+        "edge-sso/context/architecture/security.md",
+        "edge-sso/cdn-filter/src/lib.rs"
       ],
       "required": false,
-      "description": "Customer-facing contract for wiring edge-sso into an already-deployed origin: hosted login routes, /auth/providers and /auth/branding JSON contracts, login-page customization tiers, redirect validation."
+      "description": "Customer-facing contract for wiring edge-sso into an already-deployed origin: hosted login routes, /auth/providers and /auth/branding JSON contracts, login-page customization tiers, redirect validation, per-variant signing algorithm, the exact x-sso-* header set and anti-spoofing contract (from cdn-filter source — not documented anywhere in markdown), and the cookie-variant JWKS endpoint for verifying the session JWT."
     },
     "totp-integration": {
       "files": [
         "edge-totp/README.md",
-        "edge-totp/context/integration.md"
+        "edge-totp/context/integration.md",
+        "edge-totp/context/architecture/storage-and-secrets.md"
       ],
       "required": false,
-      "description": "Customer-facing contract for wiring edge-totp into an already-deployed origin: the three origin-side changes, Profile A/B trade-off, HANDOFF_KEY/JWKS shared config, enrollment."
+      "description": "Customer-facing contract for wiring edge-totp into an already-deployed origin: the three origin-side changes, Profile A/B trade-off, HANDOFF_KEY/JWKS shared config, enrollment, and the MFA_AUDIENCE claim the origin's Profile-B proof verification must check (from storage-and-secrets.md — not stated in context/integration.md itself)."
     }
   },
   "target_mapping": {
