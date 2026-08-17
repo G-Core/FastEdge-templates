@@ -1,0 +1,41 @@
+name: Publish edge-totp
+
+# otp-app and otp-filter are triggered together — a change anywhere under edge-totp/
+# rebuilds and republishes both, in one workflow run instead of two independently
+# triggered ones. The two jobs build and deploy in parallel, independently — this is
+# NOT atomic. If one job fails after the other has already deployed, the portal can
+# end up with mismatched versions of a pair whose config must match (MFA_AUDIENCE,
+# etc.) — check both deployments after a partial failure before treating the change
+# as live.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "edge-totp/**"
+
+permissions:
+  contents: read
+
+jobs:
+  otp-app:
+    uses: ./.github/workflows/_publish_js.yml
+    with:
+      template: totp-app
+      working_directory: edge-totp
+      build_command: pnpm -C otp-app build
+      output_path: edge-totp/otp-app/dist/totp-app.wasm
+      registry_dir: edge-totp/otp-app
+    secrets: inherit
+
+  otp-filter:
+    uses: ./.github/workflows/_publish_rs.yml
+    with:
+      template: totp-filter
+      rust_package: totp-filter
+      working_directory: edge-totp/otp-filter
+      output_path: edge-totp/otp-filter/wasm/totp-filter.wasm
+      registry_dir: edge-totp/otp-filter
+    secrets: inherit

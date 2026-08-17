@@ -1,0 +1,41 @@
+name: Publish edge-sso
+
+# auth-app and cdn-filter are triggered together — a change anywhere under edge-sso/
+# rebuilds and republishes both, in one workflow run instead of two independently
+# triggered ones. The two jobs build and deploy in parallel, independently — this is
+# NOT atomic. If one job fails after the other has already deployed, the portal can
+# end up with mismatched versions of a pair whose config must match (SSO_AUDIENCE,
+# etc.) — check both deployments after a partial failure before treating the change
+# as live.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "edge-sso/**"
+
+permissions:
+  contents: read
+
+jobs:
+  auth-app:
+    uses: ./.github/workflows/_publish_js.yml
+    with:
+      template: sso-auth
+      working_directory: edge-sso
+      build_command: pnpm -C auth-app build
+      output_path: edge-sso/auth-app/wasm/auth-app.wasm
+      registry_dir: edge-sso/auth-app
+    secrets: inherit
+
+  cdn-filter:
+    uses: ./.github/workflows/_publish_rs.yml
+    with:
+      template: sso-filter
+      rust_package: sso-guard
+      working_directory: edge-sso/cdn-filter
+      output_path: edge-sso/cdn-filter/wasm/sso_guard.wasm
+      registry_dir: edge-sso/cdn-filter
+    secrets: inherit
