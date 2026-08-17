@@ -1,8 +1,12 @@
 name: Publish edge-sso
 
-# auth-app and cdn-filter are deployed as a pair — a change anywhere under edge-sso/
+# auth-app and cdn-filter are triggered together — a change anywhere under edge-sso/
 # rebuilds and republishes both, in one workflow run instead of two independently
-# triggered ones.
+# triggered ones. The two jobs build and deploy in parallel, independently — this is
+# NOT atomic. If one job fails after the other has already deployed, the portal can
+# end up with mismatched versions of a pair whose config must match (SSO_AUDIENCE,
+# etc.) — check both deployments after a partial failure before treating the change
+# as live.
 
 on:
   workflow_dispatch:

@@ -1,8 +1,12 @@
 name: Publish edge-totp
 
-# otp-app and otp-filter are deployed as a pair — a change anywhere under edge-totp/
+# otp-app and otp-filter are triggered together — a change anywhere under edge-totp/
 # rebuilds and republishes both, in one workflow run instead of two independently
-# triggered ones.
+# triggered ones. The two jobs build and deploy in parallel, independently — this is
+# NOT atomic. If one job fails after the other has already deployed, the portal can
+# end up with mismatched versions of a pair whose config must match (MFA_AUDIENCE,
+# etc.) — check both deployments after a partial failure before treating the change
+# as live.
 
 on:
   workflow_dispatch:

@@ -24,7 +24,7 @@
         "edge-sso/cdn-filter/src/lib.rs"
       ],
       "required": false,
-      "description": "Customer-facing contract for wiring edge-sso into an already-deployed origin: hosted login routes, /auth/providers and /auth/branding JSON contracts, login-page customization tiers, redirect validation, per-variant signing algorithm, the exact x-sso-* header set and anti-spoofing contract (from cdn-filter source — not documented anywhere in markdown), and the cookie-variant JWKS endpoint for verifying the session JWT."
+      "description": "Customer-facing contract for wiring edge-sso into an already-deployed origin: hosted login routes, /auth/providers and /auth/branding JSON contracts, login-page customization tiers, redirect validation, per-variant signing algorithm, and the cookie-variant JWKS endpoint for verifying the session JWT. The header variant's anti-spoofing behavior is already documented in context/architecture/security.md; what's missing from markdown entirely is the exact x-sso-* header set itself, which exists only in cdn-filter source comments."
     },
     "totp-integration": {
       "files": [
