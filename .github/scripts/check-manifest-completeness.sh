@@ -22,8 +22,7 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 # All file paths declared across every 'sources' entry, as a newline-separated list.
-declared_files=$(jq -r '.sources[].files[]' "$MANIFEST")
-
+declared_files=$(jq -r '.sources | to_entries[] | (.value.files? // [])[]' "$MANIFEST")
 errors=0
 
 while IFS= read -r -d '' registry_file; do
