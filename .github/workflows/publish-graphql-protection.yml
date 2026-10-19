@@ -1,0 +1,19 @@
+name: Publish graphql-protection
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'graphql-protection/**'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish_rs.yml
+    with:
+      template: graphql-protection
+    secrets: inherit

@@ -15,6 +15,7 @@ template to adapt it to their needs.
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `html2md/`        | Proxy-WASM filter: converts HTML origin responses to Markdown on `Accept: text/markdown`                                                                  |
 | `harden-cookies/` | Proxy-WASM filter: hardens `Set-Cookie` headers with `Secure`, `HttpOnly`, `SameSite=Strict`                                                              |
+| `graphql-protection/` | Proxy-WASM filter: rejects abusive GraphQL requests (depth, batch, value size, blocked fields, debug) on request body |
 | `edge-sso/`       | Multi-provider SSO bolt-on (Google, GitHub, Microsoft, Facebook, SAML) — auth-app + cdn-filter, identity-delivery mode selected at runtime via `SSO_VARIANT`: gate-only, cookie, header |
 | `edge-totp/`      | Edge TOTP MFA bolt-on — adds RFC 6238 two-factor auth in front of an existing login; HTTP app (otp-app) + Rust proxy-wasm enforcement filter (otp-filter) |
 
@@ -29,6 +30,7 @@ FastEdge-templates/
 ├── assets/                ← shared marketing assets (deploy buttons, etc.)
 ├── .github/workflows/     ← CI/CD: builds and publishes all templates to Gcore portal
 ├── harden-cookies/        ← standalone Rust/WASM template
+├── graphql-protection/    ← standalone Rust/WASM template
 ├── html2md/               ← standalone Rust/WASM template
 ├── edge-sso/              ← standalone mixed Rust+TypeScript SSO template
 └── edge-totp/             ← standalone mixed Rust+TypeScript TOTP MFA template
@@ -57,6 +59,7 @@ Each template directory is fully self-contained:
 | CI/CD pipeline, root docs   | Repo root         | This file                                              |
 | Working on `html2md`        | `html2md/`        | `html2md/README.md`                                    |
 | Working on `harden-cookies` | `harden-cookies/` | `harden-cookies/README.md`                             |
+| Working on `graphql-protection` | `graphql-protection/` | `graphql-protection/README.md` |
 | Working on `edge-sso`       | `edge-sso/`       | `edge-sso/CLAUDE.md`, then `edge-sso/context/INDEX.md` |
 
 When working inside a template, treat it as a standalone project. The root context

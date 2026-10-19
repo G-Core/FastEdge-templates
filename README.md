@@ -24,6 +24,14 @@ variables — no code changes required.
 
 See [`harden-cookies/README.md`](harden-cookies/README.md) for details and the deploy button.
 
+### graphql-protection
+
+Proxy-WASM filter that inspects GraphQL `POST` requests and rejects abusive ones
+(excessive depth, oversized batches or values, blocked fields such as introspection)
+before they reach the origin. Configured entirely through environment variables.
+
+See [`graphql-protection/README.md`](graphql-protection/README.md) for details.
+
 ### edge-sso
 
 Multi-provider SSO bolt-on — an Identity-Aware Proxy that adds login (Google,

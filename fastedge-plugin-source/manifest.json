@@ -8,6 +8,7 @@
         "README.md",
         "html2md/README.md",
         "harden-cookies/README.md",
+        "graphql-protection/README.md",
         "edge-sso/README.md",
         "edge-totp/README.md"
       ],
