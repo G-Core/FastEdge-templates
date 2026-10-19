@@ -1,0 +1,57 @@
+{
+  "name": "Protect GraphQL API",
+  "template_id": 132,
+  "api_type": "proxy-wasm",
+  "description": "Protect GraphQL endpoint from typical attacks",
+  "params": [
+    {
+      "name": "BLOCK_DEBUG",
+      "data_type": "string",
+      "descr": "Block debug parameter in query or variables, true/false (false by default)",
+      "mandatory": false,
+      "metadata": ""
+    },
+    {
+      "name": "BLOCKED_FIELDS",
+      "data_type": "string",
+      "descr": "Query fields to block, i.e. to disable introspection, comma-separated list",
+      "mandatory": false,
+      "metadata": ""
+    },
+    {
+      "name": "ENDPOINT",
+      "data_type": "string",
+      "descr": "Endpoint path, with leading slash, \"/graphql\" by default",
+      "mandatory": false,
+      "metadata": ""
+    },
+    {
+      "name": "MAX_BATCH_SIZE",
+      "data_type": "number",
+      "descr": "Max number of queries in batch requests, not checked by default",
+      "mandatory": false,
+      "metadata": ""
+    },
+    {
+      "name": "MAX_BODY_SIZE",
+      "data_type": "number",
+      "descr": "Max size of request body, in bytes, not checked by default",
+      "mandatory": false,
+      "metadata": ""
+    },
+    {
+      "name": "MAX_QUERY_DEPTH",
+      "data_type": "number",
+      "descr": "Max depth of nested queries, not checked by default",
+      "mandatory": false,
+      "metadata": ""
+    },
+    {
+      "name": "MAX_VALUE_SIZE",
+      "data_type": "number",
+      "descr": "Max size of single value in request, in bytes, not checked by default",
+      "mandatory": false,
+      "metadata": ""
+    }
+  ]
+}

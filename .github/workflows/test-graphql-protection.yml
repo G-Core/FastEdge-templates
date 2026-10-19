@@ -1,0 +1,52 @@
+name: Test graphql-protection
+
+on:
+  pull_request:
+    paths:
+      - "graphql-protection/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and test graphql-protection
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Import credentials from Vault
+        uses: hashicorp/vault-action@v3
+        id: creds
+        with:
+          url: https://puppet-vault.gc.onl
+          token: ${{ secrets.VAULT_TOKEN }}
+          secrets: |
+            secret/project_fastedge/harbor-robot-account username | HARBOR_LOGIN ;
+            secret/project_fastedge/harbor-robot-account password | HARBOR_PASSWORD ;
+
+      - name: Login to Harbor and pull compiler
+        uses: ./.github/setup-harbor-pull
+        with:
+          harbor_login: ${{ steps.creds.outputs.HARBOR_LOGIN }}
+          harbor_password: ${{ steps.creds.outputs.HARBOR_PASSWORD }}
+
+      - name: Setup Node.js and install dependencies
+        uses: ./.github/setup-node
+        with:
+          working_directory: graphql-protection
+
+      - name: Build Rust filter
+        uses: ./.github/build-rust
+        with:
+          rust_package: graphql-protection
+          working_directory: graphql-protection
+          output_path: graphql-protection/wasm/graphql-protection.wasm
+
+      # Black-box tests run the wasm left in target/ by the build step
+      - name: Filter tests
+        working-directory: graphql-protection
+        run: pnpm test
