@@ -1,0 +1,114 @@
+name: Security audit
+
+# Advisory agent security review of filter/auth source. Runs the Claude CLI
+# against the diff using SECURITY-REVIEW.md as the rubric and posts findings as a
+# PR comment. Advisory — it never fails the check. The blocking gate stays each
+# template's own test suite (see test-*.yml).
+#
+# Self-hosted runner: the Anthropic key is pulled from the internal Vault
+# (puppet-vault.gc.onl), reachable only from self-hosted runners — same pattern
+# as test-edge-sso.yml. Fork PRs carry no secrets, so the job is skipped for them.
+#
+# Secret hygiene: the audit runs the TRUSTED base-ref copy of the script/rubric/
+# corpus (a PR cannot alter what executes), the agent step holds ANTHROPIC_API_KEY
+# but NOT GH_TOKEN, and a separate step with GH_TOKEN (but no agent) posts the
+# redacted result. This blocks a PR-authored script or prompt-injected source from
+# exfiltrating CI secrets through the audit.
+
+on:
+  pull_request:
+    paths:
+      - "**/*.rs"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.mts"
+      - "**/*.cts"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - "SECURITY-REVIEW.md"
+      - "security/traversal-corpus.txt"
+      - ".github/workflows/security-audit.yml"
+      - ".github/scripts/security-audit.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write # post the advisory comment
+
+jobs:
+  audit:
+    name: Advisory security audit
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+    # Same-repo PRs (and manual runs) only — fork PRs have no Vault token.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need base..head for the diff
+
+      # Run the audit orchestration (script + rubric + corpus) from the base ref,
+      # not the PR's copy, so a PR cannot change what executes while secrets are in
+      # scope. The audited SOURCE files stay the PR's versions. Best-effort: if the
+      # base lacks a file (bootstrap PR that introduces it), fall back to the PR
+      # copy and say so.
+      - name: Use trusted (base-ref) audit tooling
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          for f in .github/scripts/security-audit.sh SECURITY-REVIEW.md security/traversal-corpus.txt; do
+            if git cat-file -e "$BASE_SHA:$f" 2>/dev/null; then
+              git checkout "$BASE_SHA" -- "$f"
+            else
+              echo "base lacks $f — using PR copy (bootstrap)"
+            fi
+          done
+
+      # Advisory contract: a prerequisite failure (Vault, node, CLI) must not red
+      # the check. continue-on-error keeps each visible in logs but non-fatal; the
+      # audit step then finds no key and skips cleanly (exit 0).
+      - name: Import Anthropic key from Vault
+        uses: hashicorp/vault-action@v3
+        id: creds
+        continue-on-error: true
+        with:
+          url: https://puppet-vault.gc.onl
+          token: ${{ secrets.VAULT_TOKEN }}
+          secrets: |
+            secret/project_fastedge/fastedge-plugin-sync-app ANTHROPIC_API_KEY | ANTHROPIC_API_KEY ;
+
+      # Plain node only — the shared setup-node action runs `pnpm install` at the
+      # repo root, which has no package.json (templates are standalone). We just
+      # need npm to install the CLI globally.
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        continue-on-error: true
+        with:
+          node-version: "24.12.0"
+
+      - name: Install Claude CLI
+        continue-on-error: true
+        run: npm install -g @anthropic-ai/claude-code@2.1.71
+
+      # Agent step: holds ANTHROPIC_API_KEY, deliberately NOT GH_TOKEN, so the
+      # agent process cannot read a repo token from its own environment. Writes
+      # audit_body.md; does not post.
+      - name: Run security audit
+        env:
+          ANTHROPIC_API_KEY: ${{ steps.creds.outputs.ANTHROPIC_API_KEY }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+          MAX_FILES: "60"
+        run: bash .github/scripts/security-audit.sh
+
+      # Post step: holds GH_TOKEN but runs no agent. Posts the redacted result.
+      - name: Post advisory comment
+        if: ${{ github.event_name == 'pull_request' && hashFiles('audit_body.md') != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR_NUMBER" --body-file audit_body.md || echo "Comment post failed (non-fatal)."
