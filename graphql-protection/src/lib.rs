@@ -157,19 +157,7 @@ fn normalize_path(raw: &str) -> String {
     // segment instead, so `/graphql%3Bx` and `/x%3F/../graphql` both resolve to
     // `/graphql`, and `/api;v=1/graphql` to `/api/graphql`.
     let path = raw.split(['?', '#']).next().unwrap_or("");
-    // Decode repeatedly until stable. A single pass leaves a double-encoded
-    // separator intact (`%252e` → `%2e`), but an origin that re-decodes would
-    // resolve `%2e` → `.` and collapse `/..`; fully decoding here keeps the
-    // endpoint match from being bypassed by `/%252e%252e/graphql`. Bounded so
-    // malformed input can't loop forever.
-    let mut decoded = percent_decode(path);
-    for _ in 0..8 {
-        let again = percent_decode(&decoded);
-        if again == decoded {
-            break;
-        }
-        decoded = again;
-    }
+    let decoded = decode_stable(path);
     let mut segments: Vec<&str> = Vec::new();
     for seg in decoded.split(['/', '\\']) {
         let seg = seg.split([';', '?', '#']).next().unwrap_or("");
@@ -182,6 +170,24 @@ fn normalize_path(raw: &str) -> String {
         }
     }
     format!("/{}", segments.join("/")).to_ascii_lowercase()
+}
+
+/// Percent-decode repeatedly until the string stops changing. A single pass
+/// leaves a double-encoded sequence partly encoded (`%252e` → `%2e`, `%253f` →
+/// `%3f`), but an origin that re-decodes would resolve it fully; decoding to a
+/// fixed point here keeps endpoint matching and query extraction from being
+/// bypassed by multi-encoded `..`, `?`, `&` or `=`. Bounded so malformed input
+/// cannot loop forever.
+fn decode_stable(s: &str) -> String {
+    let mut out = percent_decode(s);
+    for _ in 0..8 {
+        let again = percent_decode(&out);
+        if again == out {
+            break;
+        }
+        out = again;
+    }
+    out
 }
 
 fn percent_decode(s: &str) -> String {
@@ -515,17 +521,22 @@ impl HttpContext for HttpGraphQL {
             return Action::Continue;
         }
 
-        // Everything after the first literal `?` (up to a `#` fragment) is the
-        // urlencoded query string, which is exactly an
-        // application/x-www-form-urlencoded body. Split at the FIRST `?` only:
-        // a literal `?` is valid inside the query string, so splitting on every
-        // `?` would drop any params after the second one (e.g. a `query=` hidden
-        // behind `?pad=?&query=...`) and wave the request through.
-        let Some(qs) = raw
-            .split_once('?')
-            .map(|(_, q)| q.split('#').next().unwrap_or(q))
-        else {
-            return Action::Continue; // no query string → nothing to inspect
+        // Extract the query string. The normal case has a literal `?`: parse from
+        // the RAW remainder so form_get decodes each value exactly once (an
+        // encoded `&`/`=` inside a value must not be split as a separator). A
+        // request with no literal `?` but an encoded one (`%3f`, `%253f`) hiding a
+        // query at this endpoint is obfuscation a real client never sends — decode
+        // to a fixed point to expose it, so a re-decoding origin can't run an
+        // unchecked query behind it.
+        let decoded_qs;
+        let qs = if let Some((_, q)) = raw.split_once('?') {
+            q.split('#').next().unwrap_or(q)
+        } else {
+            decoded_qs = decode_stable(&raw);
+            match decoded_qs.split_once('?') {
+                Some((_, q)) => q.split('#').next().unwrap_or(q),
+                None => return Action::Continue, // no query string → nothing to inspect
+            }
         };
 
         // Size parity with the POST path: cap the query-string length before any

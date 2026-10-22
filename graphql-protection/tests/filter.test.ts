@@ -166,6 +166,11 @@ await suite(
     { name: "GET oversized non-query param still capped → 403", run: async (r) => assertStatus(await get(r, `/graphql?pad=${"a".repeat(2500)}`), 403) },
     // A literal `?` inside the query string must not hide params from inspection.
     { name: "GET query behind a literal ? → 403", run: async (r) => blocked(await get(r, `/graphql?pad=?&query=${encodeURIComponent(INTROSPECTION)}`)) },
+    // Encoded `?` delimiter: no literal `?`, but a re-decoding origin would run it.
+    { name: "GET query behind encoded ? (%3F) → 403", run: async (r) => blocked(await get(r, `/graphql%3Fquery=${encodeURIComponent(INTROSPECTION)}`)) },
+    { name: "GET query behind double-encoded ? (%253F) → 403", run: async (r) => blocked(await get(r, `/graphql%253Fquery=${encodeURIComponent(INTROSPECTION)}`)) },
+    // Legit query whose value contains an encoded `&` must NOT be mis-split → allowed.
+    { name: "GET query with encoded & in a value → allowed", run: async (r) => assertAllowed(await get(r, gqlGetPath('{ user(x: "a&b") { id } }'))) },
     { name: "GET oversized param behind a literal ? → 403", run: async (r) => assertStatus(await get(r, `/graphql?z=?&pad=${"a".repeat(2500)}`), 403) },
     { name: "GET other path → not inspected", run: async (r) => assertAllowed(await get(r, `/other?query=${encodeURIComponent(INTROSPECTION)}`)) },
     { name: "GET path variant //graphql → inspected (403)", run: async (r) => blocked(await get(r, `//graphql?query=${encodeURIComponent(INTROSPECTION)}`)) },
