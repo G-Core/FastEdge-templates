@@ -1,0 +1,63 @@
+name: Security audit
+
+# Advisory agent security review of filter/auth source. Runs the Claude CLI
+# against the diff using SECURITY-REVIEW.md as the rubric and posts findings as a
+# PR comment. Advisory — it never fails the check. The blocking gate stays each
+# template's own test suite (see test-*.yml).
+#
+# Self-hosted runner: the Anthropic key is pulled from the internal Vault
+# (puppet-vault.gc.onl), reachable only from self-hosted runners — same pattern
+# as test-edge-sso.yml. Fork PRs carry no secrets, so the job is skipped for them.
+
+on:
+  pull_request:
+    paths:
+      - "**/src/lib.rs"
+      - "**/auth-app/src/**"
+      - "**/otp-app/src/**"
+      - "SECURITY-REVIEW.md"
+      - "security/traversal-corpus.txt"
+      - ".github/workflows/security-audit.yml"
+      - ".github/scripts/security-audit.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write # post the advisory comment
+
+jobs:
+  audit:
+    name: Advisory security audit
+    runs-on: [self-hosted, ubuntu-22-04, regular]
+    # Same-repo PRs (and manual runs) only — fork PRs have no Vault token.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need base..head for the diff
+
+      - name: Import Anthropic key from Vault
+        uses: hashicorp/vault-action@v3
+        id: creds
+        with:
+          url: https://puppet-vault.gc.onl
+          token: ${{ secrets.VAULT_TOKEN }}
+          secrets: |
+            secret/project_fastedge/fastedge-plugin-sync-app ANTHROPIC_API_KEY | ANTHROPIC_API_KEY ;
+
+      - name: Setup Node.js
+        uses: ./.github/setup-node
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.71
+
+      - name: Run security audit
+        env:
+          ANTHROPIC_API_KEY: ${{ steps.creds.outputs.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: bash .github/scripts/security-audit.sh

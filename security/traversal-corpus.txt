@@ -1,0 +1,21 @@
+# Adversarial path corpus for path-gating filters — see SECURITY-REVIEW.md item 1.
+#
+# These are request paths that begin with a legitimate auth prefix but carry a
+# traversal or encoded-separator sequence the CDN or origin may normalize into a
+# different (protected) resource. Every path-gating filter MUST treat them as
+# NOT-exempt and fall through to the auth check (gated), never wave them through.
+#
+# Source of truth. Copy the cases into each path-gating template's own test suite
+# (standalone principle — do not import this file). The security-audit workflow
+# reads it and checks each filter rejects these sequences and that its tests
+# cover them. Lines starting with '#' and blank lines are ignored.
+
+/auth/..%2fadmin
+/auth/%2e%2e%2fadmin
+/auth/%2e%2e%2f%61dmin
+/auth/%2e%2e%2fadmin%3fx=1
+/auth/.%2e%2fadmin
+/auth/%252e%252e%252fadmin
+/auth/..%5cadmin
+/auth//admin
+/auth/../admin
