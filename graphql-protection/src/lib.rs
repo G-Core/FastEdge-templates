@@ -157,7 +157,19 @@ fn normalize_path(raw: &str) -> String {
     // segment instead, so `/graphql%3Bx` and `/x%3F/../graphql` both resolve to
     // `/graphql`, and `/api;v=1/graphql` to `/api/graphql`.
     let path = raw.split(['?', '#']).next().unwrap_or("");
-    let decoded = percent_decode(path);
+    // Decode repeatedly until stable. A single pass leaves a double-encoded
+    // separator intact (`%252e` → `%2e`), but an origin that re-decodes would
+    // resolve `%2e` → `.` and collapse `/..`; fully decoding here keeps the
+    // endpoint match from being bypassed by `/%252e%252e/graphql`. Bounded so
+    // malformed input can't loop forever.
+    let mut decoded = percent_decode(path);
+    for _ in 0..8 {
+        let again = percent_decode(&decoded);
+        if again == decoded {
+            break;
+        }
+        decoded = again;
+    }
     let mut segments: Vec<&str> = Vec::new();
     for seg in decoded.split(['/', '\\']) {
         let seg = seg.split([';', '?', '#']).next().unwrap_or("");
@@ -562,7 +574,11 @@ impl HttpContext for HttpGraphQL {
         let Some(method) = self.get_property(vec!["request.method"]) else {
             return Action::Continue;
         };
-        if method != b"POST" {
+        // GET is inspected in on_http_request_headers (its query rides in the URL,
+        // not a body). Every other method that carries a GraphQL body — POST, but
+        // also PUT/PATCH/etc. that a non-standard origin might honour — is
+        // inspected here; a bodyless request (OPTIONS/HEAD) is handled below.
+        if method == b"GET" {
             return Action::Continue;
         }
 
@@ -586,6 +602,12 @@ impl HttpContext for HttpGraphQL {
         // streams through untouched above.
         if !end_of_stream {
             return Action::Pause;
+        }
+
+        // Bodyless request at the endpoint (e.g. an OPTIONS/HEAD probe or a CORS
+        // preflight) — nothing to inspect, let it through rather than 400.
+        if body_size == 0 {
+            return Action::Continue;
         }
 
         let Some(body_bytes) = self.get_http_request_body(0, body_size) else {

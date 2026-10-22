@@ -146,7 +146,9 @@ await suite(
       run: async (r) => invalid(await post(r, "/graphql", `query=${encodeURIComponent(OK)}&query=${encodeURIComponent(INTROSPECTION)}`, FORM)),
     },
     // Path variants the CDN passes through un-normalised: all must be inspected.
-    ...["/graphql?x=1", "/graphql/", "//graphql", "/GraphQL", "/%67raphql", "/api/../graphql", "/graphql;jsessionid=1", "/graphql%3Bjsessionid=1", "/graphql%3Fx", "/x%3F/../graphql", "/x%23/../graphql", "/./graphql"].map((p) => ({
+    // Includes double-encoded `..` (%252e%252e): a single decode leaves %2e%2e,
+    // which an origin re-decodes to `..` and resolves to /graphql.
+    ...["/graphql?x=1", "/graphql/", "//graphql", "/GraphQL", "/%67raphql", "/api/../graphql", "/graphql;jsessionid=1", "/graphql%3Bjsessionid=1", "/graphql%3Fx", "/x%3F/../graphql", "/x%23/../graphql", "/./graphql", "/%252e%252e/graphql", "/foo/%252e%252e/graphql"].map((p) => ({
       name: `path variant ${p} → inspected (403)`,
       run: async (r: Runner) => blocked(await post(r, p, gql(INTROSPECTION))),
     })),
@@ -167,6 +169,10 @@ await suite(
     { name: "GET oversized param behind a literal ? → 403", run: async (r) => assertStatus(await get(r, `/graphql?z=?&pad=${"a".repeat(2500)}`), 403) },
     { name: "GET other path → not inspected", run: async (r) => assertAllowed(await get(r, `/other?query=${encodeURIComponent(INTROSPECTION)}`)) },
     { name: "GET path variant //graphql → inspected (403)", run: async (r) => blocked(await get(r, `//graphql?query=${encodeURIComponent(INTROSPECTION)}`)) },
+    // Non-GET, non-POST methods that carry a GraphQL body must also be inspected.
+    { name: "PUT introspection body → 403", run: async (r) => blocked(await runFlow(r, { url: `${ORIGIN}/graphql`, method: "PUT", requestHeaders: JSON_CT, requestBody: gql(INTROSPECTION) })) },
+    { name: "PATCH introspection body → 403", run: async (r) => blocked(await runFlow(r, { url: `${ORIGIN}/graphql`, method: "PATCH", requestHeaders: JSON_CT, requestBody: gql(INTROSPECTION) })) },
+    { name: "OPTIONS preflight (no body) → allowed", run: async (r) => assertAllowed(await runFlow(r, { url: `${ORIGIN}/graphql`, method: "OPTIONS" })) },
   ],
 );
 
