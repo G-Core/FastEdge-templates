@@ -70,6 +70,16 @@ function post(runner: Runner, path: string, body: string, headers: Record<string
 const gql = (query: string, variables?: unknown) => JSON.stringify({ query, variables });
 const FORM = { "content-type": "application/x-www-form-urlencoded" };
 
+// GraphQL over GET: query/variables ride in the URL query string.
+function get(runner: Runner, path: string): Promise<Flow> {
+  return runFlow(runner, { url: `${ORIGIN}${path}`, method: "GET" });
+}
+function gqlGetPath(query: string, variables?: unknown): string {
+  let p = `/graphql?query=${encodeURIComponent(query)}`;
+  if (variables !== undefined) p += `&variables=${encodeURIComponent(JSON.stringify(variables))}`;
+  return p;
+}
+
 const tempDirs: string[] = [];
 let totalFailed = 0;
 
@@ -142,6 +152,18 @@ await suite(
     })),
     { name: "other path → not inspected", run: async (r) => assertAllowed(await post(r, "/other", gql(INTROSPECTION))) },
     { name: "/graphql-v2 → not inspected", run: async (r) => assertAllowed(await post(r, "/graphql-v2", gql(INTROSPECTION))) },
+    // GraphQL over GET: the query rides in the URL query string, which the body
+    // hook never sees. These must be inspected, not waved through.
+    { name: "GET introspection → 403", run: async (r) => blocked(await get(r, gqlGetPath(INTROSPECTION))) },
+    { name: "GET depth over limit → 403", run: async (r) => blocked(await get(r, gqlGetPath("{ a { b { c { d } } } }"))) },
+    { name: "GET blocked field via variables debug → 403", run: async (r) => blocked(await get(r, gqlGetPath("{ user(id: 1, debug: true) { name } }"))) },
+    { name: "GET valid query → allowed", run: async (r) => assertAllowed(await get(r, gqlGetPath(OK))) },
+    { name: "GET without query param (GraphiQL) → allowed", run: async (r) => assertAllowed(await get(r, "/graphql")) },
+    { name: "GET duplicate query key → 400", run: async (r) => invalid(await get(r, `/graphql?query=${encodeURIComponent(OK)}&query=${encodeURIComponent(INTROSPECTION)}`)) },
+    { name: "GET query over MAX_BODY_SIZE → 403", run: async (r) => assertStatus(await get(r, gqlGetPath(`{ user(name: "${"a".repeat(2500)}") { id } }`)), 403) },
+    { name: "GET oversized non-query param still capped → 403", run: async (r) => assertStatus(await get(r, `/graphql?pad=${"a".repeat(2500)}`), 403) },
+    { name: "GET other path → not inspected", run: async (r) => assertAllowed(await get(r, `/other?query=${encodeURIComponent(INTROSPECTION)}`)) },
+    { name: "GET path variant //graphql → inspected (403)", run: async (r) => blocked(await get(r, `//graphql?query=${encodeURIComponent(INTROSPECTION)}`)) },
   ],
 );
 

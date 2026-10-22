@@ -480,6 +480,82 @@ struct HttpGraphQL {}
 impl Context for HttpGraphQL {}
 
 impl HttpContext for HttpGraphQL {
+    fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
+        // GraphQL over GET carries the query in the URL query string, which the
+        // body hook never sees. Without inspecting it here, GET
+        // /graphql?query={...} skips every depth/batch/value/blocked-field/debug
+        // check. POST (and other body-bearing methods) are handled in
+        // on_http_request_body.
+        let Some(method) = self.get_property(vec!["request.method"]) else {
+            return Action::Continue;
+        };
+        if method != b"GET" {
+            return Action::Continue;
+        }
+
+        let config = Config::from_env();
+
+        let Some(path) = self.get_property(vec!["request.path"]) else {
+            return Action::Continue;
+        };
+        let raw = String::from_utf8_lossy(&path);
+        if normalize_path(&raw) != normalize_path(&config.endpoint) {
+            return Action::Continue;
+        }
+
+        // Everything after the first literal `?` (up to a `#` fragment) is the
+        // urlencoded query string, which is exactly an
+        // application/x-www-form-urlencoded body.
+        let Some(qs) = raw
+            .split('?')
+            .nth(1)
+            .map(|q| q.split('#').next().unwrap_or(q))
+        else {
+            return Action::Continue; // no query string → nothing to inspect
+        };
+
+        // Size parity with the POST path: cap the query-string length before any
+        // parsing (including form_get's scan), so an oversized GET query can't be
+        // force-processed regardless of which params it carries.
+        if let Some(limit) = config.max_body_size {
+            if limit > 0 && qs.len() > limit {
+                self.send_http_response(403, vec![("X-Reject-Reason", "Request body size exceeds limit")], None);
+                return Action::Pause;
+            }
+        }
+
+        // A bare GET to the endpoint (e.g. loading a GraphiQL IDE) carries no
+        // `query` param and passes through untouched; a duplicated `query` key is
+        // a smuggling attempt and is rejected.
+        match form_get(qs, "query") {
+            Ok(None) => return Action::Continue,
+            Ok(Some(_)) => {}
+            Err(e) => {
+                println!("Failed to parse GET query string: {}", e);
+                self.send_http_response(400, vec![("X-Reject-Reason", "Invalid GraphQL request")], None);
+                return Action::Pause;
+            }
+        }
+
+        let ctx = ASTContext::new();
+        let body = match parse_body(&ctx, "application/x-www-form-urlencoded", qs.as_bytes()) {
+            Ok(b) => b,
+            Err(e) => {
+                println!("Failed to parse GET query string: {}", e);
+                self.send_http_response(400, vec![("X-Reject-Reason", "Invalid GraphQL request")], None);
+                return Action::Pause;
+            }
+        };
+
+        if let Err(e) = check_requests(&body, &config) {
+            println!("Request check failed: {}", e);
+            self.send_http_response(403, vec![("X-Reject-Reason", "GraphQL request blocked")], None);
+            return Action::Pause;
+        }
+
+        Action::Continue
+    }
+
     fn on_http_request_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
         let Some(method) = self.get_property(vec!["request.method"]) else {
             return Action::Continue;

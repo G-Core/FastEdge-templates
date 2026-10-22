@@ -219,6 +219,11 @@ await track(runVariantFailClosedSuite(WASM));
     family_name: "User",
   });
   const jwtSubOnly = await makeJwt(3600, TEST_SUB);
+  // A display name carrying CRLF (legal in a JWT string once unescaped) must not
+  // be able to inject an extra header line into the origin request.
+  const jwtCrlfName = await makeJwtWithClaims(3600, {
+    name: "Evil\r\nx-admin: true",
+  });
 
   const claimCfgDir = await mkdtemp(join(tmpdir(), "header-claims-"));
   await writeFile(
@@ -286,6 +291,29 @@ await track(runVariantFailClosedSuite(WASM));
                 if (v !== undefined && v !== "") {
                   throw new Error(`expected no ${h} for sub-only JWT, got '${v}'`);
                 }
+              }
+            },
+          },
+          {
+            name: "CRLF in a claim is stripped, not injected as a header line",
+            run: async (runner) => {
+              const r = await runFlow(runner, {
+                url: "built-in",
+                requestHeaders: { cookie: `sso_session=${jwtCrlfName}` },
+              });
+              if (r.hookResults.onRequestHeaders.returnCode !== 0) {
+                throw new Error(
+                  `expected Continue, got returnCode=${r.hookResults.onRequestHeaders.returnCode}`,
+                );
+              }
+              const out = r.hookResults.onRequestHeaders.output.request.headers;
+              const name = headerValue(out["x-sso-name"] as string | string[] | undefined);
+              if (/[\r\n]/.test(name)) {
+                throw new Error(`x-sso-name still contains CR/LF: ${JSON.stringify(name)}`);
+              }
+              // The smuggled header name must not have leaked through as its own header.
+              if (out["x-admin"] !== undefined) {
+                throw new Error(`CRLF injection leaked an x-admin header: '${out["x-admin"]}'`);
               }
             },
           },
