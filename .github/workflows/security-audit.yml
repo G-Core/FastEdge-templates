@@ -13,8 +13,8 @@ on:
   pull_request:
     paths:
       - "**/src/lib.rs"
-      - "**/auth-app/src/**"
-      - "**/otp-app/src/**"
+      - "**/auth-app/**"
+      - "**/otp-app/**"
       - "SECURITY-REVIEW.md"
       - "security/traversal-corpus.txt"
       - ".github/workflows/security-audit.yml"
@@ -38,9 +38,13 @@ jobs:
         with:
           fetch-depth: 0 # need base..head for the diff
 
+      # Advisory contract: a prerequisite failure (Vault, node, CLI) must not red
+      # the check. continue-on-error keeps each visible in logs but non-fatal; the
+      # audit step then finds no key and skips cleanly (exit 0).
       - name: Import Anthropic key from Vault
         uses: hashicorp/vault-action@v3
         id: creds
+        continue-on-error: true
         with:
           url: https://puppet-vault.gc.onl
           token: ${{ secrets.VAULT_TOKEN }}
@@ -52,10 +56,12 @@ jobs:
       # need npm to install the CLI globally.
       - name: Setup Node.js
         uses: actions/setup-node@v6
+        continue-on-error: true
         with:
           node-version: "24.12.0"
 
       - name: Install Claude CLI
+        continue-on-error: true
         run: npm install -g @anthropic-ai/claude-code@2.1.71
 
       - name: Run security audit

@@ -23,15 +23,29 @@ else
   CHANGED=$(git ls-files)
 fi
 
-# When the audit tooling or the checklist itself changed, re-audit every filter —
-# a rubric change means the whole surface should be re-checked. Otherwise audit
-# only the filter/auth source the PR touched.
+# The repo has three source layouts: Rust filters live at `*/src/lib.rs` (at the
+# template root for graphql-protection/harden-cookies/html2md, under a filter
+# subdir for edge-sso/edge-totp); auth apps are either flat (edge-sso/auth-app,
+# no src/) or `*/otp-app/src/`. Enumerate both layout-agnostically.
+mapfile -t FILTERS < <(git ls-files '*/src/lib.rs')
+mapfile -t AUTHSRC < <(git ls-files '*auth-app/*' '*otp-app/*' \
+  | grep -E '\.(ts|tsx|js|jsx)$' \
+  | grep -vE '/(tests?|node_modules|dist|target)/' || true)
+
+in_changed() { printf '%s\n' "$CHANGED" | grep -qxF -- "$1"; }
+
+# When the rubric or audit tooling changed, re-audit every filter (the whole
+# path-gating surface), plus any auth-app source this PR touched. Otherwise audit
+# only the filter/auth source the PR changed.
+FILES=()
 if echo "$CHANGED" | grep -qE '^(SECURITY-REVIEW\.md|security/traversal-corpus\.txt|\.github/(workflows/security-audit\.yml|scripts/security-audit\.sh))$'; then
-  echo "Audit tooling/checklist changed — auditing all filter source."
-  mapfile -t FILES < <(git ls-files '*/src/lib.rs')
+  echo "Audit tooling/checklist changed — auditing all filters + changed auth-app source."
+  FILES+=("${FILTERS[@]}")
+  for f in "${AUTHSRC[@]}"; do in_changed "$f" && FILES+=("$f"); done
 else
-  mapfile -t FILES < <(echo "$CHANGED" | grep -E '(cdn-filter|-filter|auth-app|otp-app)/src/.*\.(rs|ts|js)$' || true)
+  for f in "${FILTERS[@]}" "${AUTHSRC[@]}"; do in_changed "$f" && FILES+=("$f"); done
 fi
+mapfile -t FILES < <(printf '%s\n' "${FILES[@]}" | awk 'NF' | sort -u)
 
 if [ "${#FILES[@]}" -eq 0 ]; then
   echo "No filter/auth source in scope — nothing to audit."
