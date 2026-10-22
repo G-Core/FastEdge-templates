@@ -73,7 +73,13 @@ the check — never fail open (`Action::Continue`).
   `edge-sso/cdn-filter`.
 - Values written into headers or a response status line are free of CR/LF and
   other control characters (header injection / response splitting) — never
-  interpolate raw request input into a header value.
+  interpolate raw request input into a header value. The correct filter strips
+  all C0/C1 control chars (via `char::is_control`, which also covers CR, LF, NUL,
+  DEL and NEL/U+0085) plus the Unicode line/paragraph separators U+2028/U+2029.
+  Do NOT restrict to printable ASCII: non-ASCII bytes cannot contain the `0x0A`/
+  `0x0D` that split an HTTP/1.1 header, and an ASCII-only filter would corrupt
+  legitimate international names/emails in identity headers. **Canonical:**
+  `sanitize_header_value()` in `edge-sso/cdn-filter`.
 
 ## 4. Redirects
 

@@ -265,11 +265,15 @@ impl SsoGuard {
     }
 }
 
-/// Strip control bytes (C0 range and DEL) from a value destined for a request
-/// header, so an unescaped CR/LF in a JWT claim cannot split the header.
+/// Strip characters a downstream HTTP parser or log pipeline could treat as a
+/// line break and use to forge a header line: all C0/C1 control chars (CR, LF,
+/// NUL, DEL, and NEL/U+0085) plus the Unicode line/paragraph separators
+/// (U+2028/U+2029). Other non-ASCII is kept, so international names and email
+/// addresses in x-sso-* survive intact — restricting to printable ASCII would
+/// corrupt legitimate identity values and is deliberately NOT done.
 fn sanitize_header_value(v: &str) -> String {
     v.chars()
-        .filter(|&c| (c as u32) >= 0x20 && c != '\u{7f}')
+        .filter(|&c| !c.is_control() && c != '\u{2028}' && c != '\u{2029}')
         .collect()
 }
 

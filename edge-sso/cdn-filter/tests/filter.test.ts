@@ -219,10 +219,12 @@ await track(runVariantFailClosedSuite(WASM));
     family_name: "User",
   });
   const jwtSubOnly = await makeJwt(3600, TEST_SUB);
-  // A display name carrying CRLF (legal in a JWT string once unescaped) must not
-  // be able to inject an extra header line into the origin request.
+  // A display name carrying CRLF or a Unicode line separator (both legal in a
+  // JWT string once unescaped) must not be able to forge a header line, while a
+  // legitimate non-ASCII name must pass through unchanged (no ASCII-only mangling).
   const jwtCrlfName = await makeJwtWithClaims(3600, {
-    name: "Evil\r\nx-admin: true",
+    name: "Evil\r\n\u2028\u0085x-admin: true",
+    email: "José.Müller@example.com",
   });
 
   const claimCfgDir = await mkdtemp(join(tmpdir(), "header-claims-"));
@@ -295,7 +297,7 @@ await track(runVariantFailClosedSuite(WASM));
             },
           },
           {
-            name: "CRLF in a claim is stripped, not injected as a header line",
+            name: "line-break chars in a claim are stripped; non-ASCII identity preserved",
             run: async (runner) => {
               const r = await runFlow(runner, {
                 url: "built-in",
@@ -308,12 +310,18 @@ await track(runVariantFailClosedSuite(WASM));
               }
               const out = r.hookResults.onRequestHeaders.output.request.headers;
               const name = headerValue(out["x-sso-name"] as string | string[] | undefined);
-              if (/[\r\n]/.test(name)) {
-                throw new Error(`x-sso-name still contains CR/LF: ${JSON.stringify(name)}`);
+              // CR, LF, U+2028 and U+0085 (NEL) must all be gone.
+              if (/[\r\n\u2028\u0085]/.test(name)) {
+                throw new Error(`x-sso-name still contains a line break: ${JSON.stringify(name)}`);
               }
               // The smuggled header name must not have leaked through as its own header.
               if (out["x-admin"] !== undefined) {
-                throw new Error(`CRLF injection leaked an x-admin header: '${out["x-admin"]}'`);
+                throw new Error(`injection leaked an x-admin header: '${out["x-admin"]}'`);
+              }
+              // Legitimate non-ASCII must survive — never flattened to ASCII.
+              const email = headerValue(out["x-sso-email"] as string | string[] | undefined);
+              if (email !== "José.Müller@example.com") {
+                throw new Error(`x-sso-email mangled non-ASCII: ${JSON.stringify(email)}`);
               }
             },
           },
