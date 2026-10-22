@@ -283,6 +283,27 @@ export async function runGateSuites(
             }
           },
         },
+        ...[
+          "/auth/..%2fadmin",
+          "/auth/%2e%2e%2fadmin",
+          "/auth/%2e%2e%2f%61dmin",
+          "/auth/%2e%2e%2fadmin%3fx=1",
+          "/auth/.%2e%2fadmin",
+          "/auth/%252e%252e%252fadmin",
+          "/auth/..%5cadmin",
+          "/auth//admin",
+        ].map((path) => ({
+          name: `traversal ${path} is NOT bypassed → 302`,
+          run: async (runner: any) => {
+            const r = await runFlow(runner, {
+              url: `https://cdn.example.com${path}`,
+              requestHeaders: {},
+            });
+            if (r.finalResponse.status !== 302) {
+              throw new Error(`expected 302 for ${path}, got ${r.finalResponse.status}`);
+            }
+          },
+        })),
         {
           name: "expired JWT → 302",
           run: async (runner) => {

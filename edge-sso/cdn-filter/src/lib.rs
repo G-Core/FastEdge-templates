@@ -251,7 +251,24 @@ impl SsoGuard {
 
 fn is_auth_path(full_path: &str, auth_prefix: &str) -> bool {
     let path = full_path.split('?').next().unwrap_or(full_path);
+    // Never bypass a path carrying traversal or encoded-separator sequences.
+    // `/auth/%2e%2e%2fadmin` matches the prefix, but the CDN or origin may
+    // normalise it to `/admin` — fall through to the session check instead.
+    if has_suspicious_sequence(path) {
+        return false;
+    }
     path == auth_prefix || path.starts_with(&format!("{}/", auth_prefix))
+}
+
+/// Detect path segments that could be normalised into a different resource:
+/// `..`, `//`, backslashes, or percent-encoded dots and slashes (`%2e`, `%2f`,
+/// `%5c`, including double-encoding via `%25`).
+fn has_suspicious_sequence(path: &str) -> bool {
+    if path.contains("..") || path.contains("//") || path.contains('\\') {
+        return true;
+    }
+    let lower = path.to_ascii_lowercase();
+    lower.contains("%2e") || lower.contains("%2f") || lower.contains("%5c") || lower.contains("%25")
 }
 
 fn extract_cookie(header: &str, name: &str) -> Option<String> {
