@@ -162,6 +162,9 @@ await suite(
     { name: "GET duplicate query key → 400", run: async (r) => invalid(await get(r, `/graphql?query=${encodeURIComponent(OK)}&query=${encodeURIComponent(INTROSPECTION)}`)) },
     { name: "GET query over MAX_BODY_SIZE → 403", run: async (r) => assertStatus(await get(r, gqlGetPath(`{ user(name: "${"a".repeat(2500)}") { id } }`)), 403) },
     { name: "GET oversized non-query param still capped → 403", run: async (r) => assertStatus(await get(r, `/graphql?pad=${"a".repeat(2500)}`), 403) },
+    // A literal `?` inside the query string must not hide params from inspection.
+    { name: "GET query behind a literal ? → 403", run: async (r) => blocked(await get(r, `/graphql?pad=?&query=${encodeURIComponent(INTROSPECTION)}`)) },
+    { name: "GET oversized param behind a literal ? → 403", run: async (r) => assertStatus(await get(r, `/graphql?z=?&pad=${"a".repeat(2500)}`), 403) },
     { name: "GET other path → not inspected", run: async (r) => assertAllowed(await get(r, `/other?query=${encodeURIComponent(INTROSPECTION)}`)) },
     { name: "GET path variant //graphql → inspected (403)", run: async (r) => blocked(await get(r, `//graphql?query=${encodeURIComponent(INTROSPECTION)}`)) },
   ],

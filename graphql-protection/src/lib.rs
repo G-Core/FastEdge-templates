@@ -505,11 +505,13 @@ impl HttpContext for HttpGraphQL {
 
         // Everything after the first literal `?` (up to a `#` fragment) is the
         // urlencoded query string, which is exactly an
-        // application/x-www-form-urlencoded body.
+        // application/x-www-form-urlencoded body. Split at the FIRST `?` only:
+        // a literal `?` is valid inside the query string, so splitting on every
+        // `?` would drop any params after the second one (e.g. a `query=` hidden
+        // behind `?pad=?&query=...`) and wave the request through.
         let Some(qs) = raw
-            .split('?')
-            .nth(1)
-            .map(|q| q.split('#').next().unwrap_or(q))
+            .split_once('?')
+            .map(|(_, q)| q.split('#').next().unwrap_or(q))
         else {
             return Action::Continue; // no query string → nothing to inspect
         };
