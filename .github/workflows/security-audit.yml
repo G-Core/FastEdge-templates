@@ -12,9 +12,11 @@ name: Security audit
 on:
   pull_request:
     paths:
-      - "**/src/lib.rs"
-      - "**/auth-app/**"
-      - "**/otp-app/**"
+      - "**/*.rs"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
       - "SECURITY-REVIEW.md"
       - "security/traversal-corpus.txt"
       - ".github/workflows/security-audit.yml"

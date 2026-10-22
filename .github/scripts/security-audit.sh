@@ -17,33 +17,30 @@ if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
   exit 0
 fi
 
-if [ -n "$BASE_SHA" ]; then
-  CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
-else
-  CHANGED=$(git ls-files)
-fi
+# Selection is extension-based, not folder-based: any source file is in scope
+# regardless of where a (future) template puts it — no per-template config here.
+SRC_RE='\.(rs|ts|tsx|js|jsx|mjs|cjs)$'
+# Noise that is not product source: tests, vendored deps, build output, types.
+EXCLUDE_RE='/(tests?|__tests__|node_modules|dist|build|target|coverage|examples?)/|\.(test|spec|d)\.[cm]?[tj]sx?$'
 
-# The repo has three source layouts: Rust filters live at `*/src/lib.rs` (at the
-# template root for graphql-protection/harden-cookies/html2md, under a filter
-# subdir for edge-sso/edge-totp); auth apps are either flat (edge-sso/auth-app,
-# no src/) or `*/otp-app/src/`. Enumerate both layout-agnostically.
+# The path-gating filters are the baseline re-audited whenever the rubric/tooling
+# changes (a rubric change should re-check the security-critical gate code).
 mapfile -t FILTERS < <(git ls-files '*/src/lib.rs')
-mapfile -t AUTHSRC < <(git ls-files '*auth-app/*' '*otp-app/*' \
-  | grep -E '\.(ts|tsx|js|jsx)$' \
-  | grep -vE '/(tests?|node_modules|dist|target)/' || true)
 
-in_changed() { printf '%s\n' "$CHANGED" | grep -qxF -- "$1"; }
-
-# When the rubric or audit tooling changed, re-audit every filter (the whole
-# path-gating surface), plus any auth-app source this PR touched. Otherwise audit
-# only the filter/auth source the PR changed.
 FILES=()
-if echo "$CHANGED" | grep -qE '^(SECURITY-REVIEW\.md|security/traversal-corpus\.txt|\.github/(workflows/security-audit\.yml|scripts/security-audit\.sh))$'; then
-  echo "Audit tooling/checklist changed — auditing all filters + changed auth-app source."
+if [ -z "$BASE_SHA" ]; then
+  # Manual / dispatch run: no diff — audit the path-gating filters only (bounded).
+  echo "Manual run — auditing path-gating filters."
   FILES+=("${FILTERS[@]}")
-  for f in "${AUTHSRC[@]}"; do in_changed "$f" && FILES+=("$f"); done
 else
-  for f in "${FILTERS[@]}" "${AUTHSRC[@]}"; do in_changed "$f" && FILES+=("$f"); done
+  CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
+  mapfile -t CHANGED_SRC < <(printf '%s\n' "$CHANGED" | grep -E "$SRC_RE" | grep -vE "$EXCLUDE_RE" || true)
+  FILES+=("${CHANGED_SRC[@]}")
+  # A rubric/tooling change also re-audits every filter, on top of changed source.
+  if echo "$CHANGED" | grep -qE '^(SECURITY-REVIEW\.md|security/traversal-corpus\.txt|\.github/(workflows/security-audit\.yml|scripts/security-audit\.sh))$'; then
+    echo "Audit tooling/checklist changed — adding all path-gating filters."
+    FILES+=("${FILTERS[@]}")
+  fi
 fi
 mapfile -t FILES < <(printf '%s\n' "${FILES[@]}" | awk 'NF' | sort -u)
 
