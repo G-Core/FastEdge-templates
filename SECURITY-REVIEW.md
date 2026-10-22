@@ -39,8 +39,12 @@ do not reinvent it.
 origin could normalize into a *different* resource. Fail closed — fall through to
 the check — never fail open (`Action::Continue`).
 
-- Reject before exempting: `..`, `//`, `\`, and the percent-encoded forms
-  `%2e`, `%2f`, `%5c`, and `%25` (double-encoding).
+- **Exempt only plain, unencoded ASCII paths.** Reject before exempting: any
+  non-ASCII byte, any control/NUL byte, any `%` (all percent-encoding), `..`,
+  `//`, and `\`. A finite blocklist of specific encodings (`%2e`, `%2f`, …) is
+  not enough — it misses overlong UTF-8 (`%c0%ae`), unicode dot/slash, `%00`, and
+  multi-encoding. Because the guard fails closed, the character-class predicate is
+  enough and needs no path parser.
 - **Why:** `request.path` reaching the filter is the raw, undecoded path
   (confirmed live). The CDN or origin may resolve `/auth/%2e%2e%2fadmin` into
   `/admin`, so a raw prefix match waves an unauthenticated request past the gate.
@@ -53,8 +57,13 @@ the check — never fail open (`Action::Continue`).
 
 - The verifier pins the algorithm; the token never selects it (no `alg: none`,
   no HS/ES confusion). **Canonical:** `expected_alg()` in `edge-sso/cdn-filter`.
+- Header-supplied key references are not trusted: ignore or allowlist `kid`, and
+  never fetch `jku` / `x5u` (SSRF + key-substitution). Keys come from configured
+  secrets / a pinned JWKS, not from the token.
 - Signature is verified before any claim is trusted.
 - `exp` / `iat` enforced; `aud` / `iss` checked when configured.
+- Secret/token comparisons are constant-time (no early-exit `==` on MACs/codes).
+  **Canonical:** `safeEqual` in `edge-totp/otp-app`.
 
 ## 3. Injected / trusted headers
 
@@ -62,17 +71,27 @@ the check — never fail open (`Action::Continue`).
   the verified value, never passed through from the client. A spoofed client copy
   must not survive the filter. **Canonical:** `put_user_header()` in
   `edge-sso/cdn-filter`.
+- Values written into headers or a response status line are free of CR/LF and
+  other control characters (header injection / response splitting) — never
+  interpolate raw request input into a header value.
 
 ## 4. Redirects
 
 - `?redirect=` / return-URL targets are validated against an allowlist;
-  relative-only by default. Reject protocol-relative (`//host`, `/\host`) and
-  off-origin absolutes. **Canonical:** open-redirect handling in `edge-sso`
-  (`SSO_ALLOWED_ORIGINS`).
+  relative-only by default. Reject protocol-relative (`//host`, `/\host`),
+  off-origin absolutes, and IDN/punycode look-alikes. **Canonical:** open-redirect
+  handling in `edge-sso` (`SSO_ALLOWED_ORIGINS`).
+
+## 4a. Outbound fetch (SSRF)
+
+- `fetch()` targets (IdP endpoints, JWKS, metadata URLs) come from configuration,
+  not from request input or token contents. A URL derived from the request is
+  allowlisted by host before it is fetched.
 
 ## 5. Cookies
 
-- Session cookies carry `HttpOnly; Secure; SameSite`.
+- Session cookies carry `HttpOnly; Secure; SameSite`; prefer a `__Host-` name
+  prefix for host-scoped session cookies.
 - gate-only and header variants strip the session cookie before proxying so the
   origin never sees the raw token.
 

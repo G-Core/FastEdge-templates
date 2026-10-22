@@ -141,15 +141,20 @@ fn is_bypass_path(full_path: &str, auth_prefix: &str) -> bool {
         || path.starts_with(&format!("{auth_prefix}/"))
 }
 
-/// Detect path segments that could be normalised by the origin into a
-/// different resource: `..`, `//`, backslashes, or percent-encoded dots and
-/// slashes (`%2e`, `%2f`, including double-encoding via `%25`).
+/// Decide whether a path is too risky to exempt from the OTP check. We exempt
+/// only plain, unencoded ASCII paths; anything else falls through to the check
+/// (fail closed). Because the guard fails closed, a character-class predicate is
+/// enough to defeat normalisation differentials — overlong UTF-8 (`%c0%ae`),
+/// unicode dot/slash, NUL/control bytes, and multi-encoding — without decoding
+/// the path. Legitimate bypass paths (`/health`, `AUTH_PREFIX/...`) are plain
+/// ASCII; the query string is split off before this runs.
 fn has_suspicious_sequence(path: &str) -> bool {
-    if path.contains("..") || path.contains("//") || path.contains('\\') {
-        return true;
-    }
-    let lower = path.to_ascii_lowercase();
-    lower.contains("%2e") || lower.contains("%2f") || lower.contains("%5c") || lower.contains("%25")
+    !path.is_ascii()
+        || path.bytes().any(|b| b < 0x20) // NUL / control bytes
+        || path.contains('%') // any percent-encoding
+        || path.contains("..")
+        || path.contains("//")
+        || path.contains('\\')
 }
 
 fn extract_cookie(header: &str, name: &str) -> Option<String> {

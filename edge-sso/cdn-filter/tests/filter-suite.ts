@@ -292,6 +292,12 @@ export async function runGateSuites(
           "/auth/%252e%252e%252fadmin",
           "/auth/..%5cadmin",
           "/auth//admin",
+          // Normalisation differentials the tightened guard also rejects:
+          "/auth/..;/admin", // path-param trick
+          "/auth/%c0%ae%c0%ae%c0%afadmin", // overlong UTF-8 dot/slash
+          "/auth/%2E%2E%2Fadmin", // uppercase percent-encoding
+          "/auth/..%00admin", // null byte
+          "/auth/%e2%88%95admin", // unicode division slash
         ].map((path) => ({
           name: `traversal ${path} is NOT bypassed → 302`,
           run: async (runner: any) => {
