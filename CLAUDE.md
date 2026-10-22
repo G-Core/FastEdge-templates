@@ -65,6 +65,14 @@ Each template directory is fully self-contained:
 When working inside a template, treat it as a standalone project. The root context
 does not apply to template internals.
 
+## Security review
+
+Any change to a filter, auth app, or request/response handling must be checked
+against `SECURITY-REVIEW.md` (repo root) before it is proposed or merged — these
+are published products on customer edge traffic. It leads with the path-gating /
+auth-bypass invariant and ends with the cross-template rule: a guard in one
+template does not protect the others, so port it.
+
 ## CI/CD
 
 `.github/workflows/` at the repo root builds and publishes all templates to the

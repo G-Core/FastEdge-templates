@@ -251,7 +251,30 @@ impl SsoGuard {
 
 fn is_auth_path(full_path: &str, auth_prefix: &str) -> bool {
     let path = full_path.split('?').next().unwrap_or(full_path);
+    // Never bypass a path carrying traversal or encoded-separator sequences.
+    // `/auth/%2e%2e%2fadmin` matches the prefix, but the CDN or origin may
+    // normalise it to `/admin` — fall through to the session check instead.
+    if has_suspicious_sequence(path) {
+        return false;
+    }
     path == auth_prefix || path.starts_with(&format!("{}/", auth_prefix))
+}
+
+/// Decide whether a path is too risky to exempt from the session check. We
+/// exempt only plain, unencoded ASCII paths; anything else falls through to the
+/// session check (fail closed). Because the guard fails closed, a character-class
+/// predicate is enough to defeat normalisation differentials — overlong UTF-8
+/// (`%c0%ae`), unicode dot/slash, NUL/control bytes, and multi-encoding — without
+/// decoding the path. Legitimate auth routes (`/auth/login`, `/auth/callback`,
+/// `/auth/.well-known/jwks.json`) are plain ASCII; the query string is split off
+/// before this runs, so encoded `?redirect=` values are unaffected.
+fn has_suspicious_sequence(path: &str) -> bool {
+    !path.is_ascii()
+        || path.bytes().any(|b| b < 0x20) // NUL / control bytes
+        || path.contains('%') // any percent-encoding
+        || path.contains("..")
+        || path.contains("//")
+        || path.contains('\\')
 }
 
 fn extract_cookie(header: &str, name: &str) -> Option<String> {

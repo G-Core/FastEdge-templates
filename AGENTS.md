@@ -33,6 +33,13 @@ Do not waste tokens on experiments. Do only what is asked.
   observation ("works oddly") → discuss, DO NOT fix
   request ("fix this") → act
 
+# SECURITY
+
+Templates here are built and published as products that run on customer edge
+traffic. Before proposing any change to a filter, auth app, or request/response
+handling, check the diff against `SECURITY-REVIEW.md` and do its cross-template
+check. These templates share no code, so a guard in one does not protect another.
+
 # REPO CONTEXT
 
 See `CLAUDE.md` for repo structure and how to navigate to the right template.

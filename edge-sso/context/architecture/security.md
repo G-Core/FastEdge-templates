@@ -77,6 +77,11 @@ sessions (see "Audience binding").
   `SSO_ALLOWED_ORIGINS`; relative paths are allowed, off-origin absolutes are
   dropped to `/`. Protocol-relative and backslash bypasses (`/\evil.com`) are
   rejected.
+- **Auth-prefix bypass is traversal-safe.** The filter exempts `AUTH_PREFIX/**`
+  from the session check, but never for a path containing `..`, `//`, `\`, or
+  `%2e`/`%2f`/`%5c`/`%25` — those fall through to the session check, since the
+  CDN or origin may normalise `/auth/%2e%2e%2fadmin` to `/admin`. Same guard as
+  edge-totp's otp-filter.
 - **Canonical host.** `CANONICAL_HOST` 301-redirects requests on other hosts,
   keeping sessions and IdP callbacks on one domain.
 - **Generic error page.** Failures redirect to a static `/auth/error` that reflects
