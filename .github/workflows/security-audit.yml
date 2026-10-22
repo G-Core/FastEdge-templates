@@ -47,8 +47,13 @@ jobs:
           secrets: |
             secret/project_fastedge/fastedge-plugin-sync-app ANTHROPIC_API_KEY | ANTHROPIC_API_KEY ;
 
+      # Plain node only — the shared setup-node action runs `pnpm install` at the
+      # repo root, which has no package.json (templates are standalone). We just
+      # need npm to install the CLI globally.
       - name: Setup Node.js
-        uses: ./.github/setup-node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.12.0"
 
       - name: Install Claude CLI
         run: npm install -g @anthropic-ai/claude-code@2.1.71
