@@ -110,6 +110,12 @@ the check — never fail open (`Action::Continue`).
 
 - Error responses reflect no caller input; the real reason is logged server-side
   only. **Canonical:** generic `/auth/error` in `edge-sso`.
+- **Accepted exception:** `graphql-protection` returns a small set of *static*
+  `X-Reject-Reason` headers (`"GraphQL request blocked"`, `"Request body size
+  exceeds limit"`, `"Invalid GraphQL request"`). These echo no caller input and
+  deliberately tell a client which protection rule fired (developer feedback is a
+  product feature here); the low-value disclosure of *which* check tripped is
+  accepted. Do not flag these as a finding.
 
 ## 8. Secrets / configuration
 
