@@ -42,11 +42,13 @@ async function mint(
   sub = "user-123",
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  return new SignJWT({ sub, amr: ["otp"], ...claims })
+  const payload = { sub, amr: ["otp"], ...claims };
+  const builder = new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-    .setIssuedAt(now)
-    .setExpirationTime(now + ttlSeconds)
-    .sign(bytes(SESSION_KEY));
+    .setExpirationTime(now + ttlSeconds);
+  // Let a caller-supplied `iat` stand (e.g. a future-issued token); otherwise now.
+  if (payload.iat === undefined) builder.setIssuedAt(now);
+  return builder.sign(bytes(SESSION_KEY));
 }
 
 /**
@@ -149,6 +151,7 @@ const wrongKeyJwt = await new SignJWT({ sub: "user-123", aud: AUDIENCE })
   .sign(bytes("a-different-secret-key-that-should-not-verify"));
 const nowSec = Math.floor(Date.now() / 1000);
 const notYetValidJwt = await mint(7200, { aud: AUDIENCE, nbf: nowSec + 3600 });
+const futureIatJwt = await mint(7200, { aud: AUDIENCE, iat: nowSec + 3600 });
 
 // --- Gate behaviour (audience configured, redirect login configured) --------
 await suite(
@@ -184,6 +187,7 @@ await suite(
     { name: "tampered signature → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(tamperedJwt) }), 302) },
     { name: "wrong signing key → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(wrongKeyJwt) }), 302) },
     { name: "not-yet-valid (nbf in future) → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(notYetValidJwt) }), 302) },
+    { name: "future-issued (iat ahead of skew) → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(futureIatJwt) }), 302) },
     { name: "malformed token (no dots) → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: { cookie: `${DEFAULT_COOKIE}=not-a-jwt` } }), 302) },
     {
       name: "alg=none token → 302 (alg pinned to HS256)",

@@ -73,7 +73,13 @@ the check — never fail open (`Action::Continue`).
   `edge-sso/cdn-filter`.
 - Values written into headers or a response status line are free of CR/LF and
   other control characters (header injection / response splitting) — never
-  interpolate raw request input into a header value.
+  interpolate raw request input into a header value. The correct filter strips
+  all C0/C1 control chars (via `char::is_control`, which also covers CR, LF, NUL,
+  DEL and NEL/U+0085) plus the Unicode line/paragraph separators U+2028/U+2029.
+  Do NOT restrict to printable ASCII: non-ASCII bytes cannot contain the `0x0A`/
+  `0x0D` that split an HTTP/1.1 header, and an ASCII-only filter would corrupt
+  legitimate international names/emails in identity headers. **Canonical:**
+  `sanitize_header_value()` in `edge-sso/cdn-filter`.
 
 ## 4. Redirects
 
@@ -104,6 +110,12 @@ the check — never fail open (`Action::Continue`).
 
 - Error responses reflect no caller input; the real reason is logged server-side
   only. **Canonical:** generic `/auth/error` in `edge-sso`.
+- **Accepted exception:** `graphql-protection` returns a small set of *static*
+  `X-Reject-Reason` headers (`"GraphQL request blocked"`, `"Request body size
+  exceeds limit"`, `"Invalid GraphQL request"`). These echo no caller input and
+  deliberately tell a client which protection rule fired (developer feedback is a
+  product feature here); the low-value disclosure of *which* check tripped is
+  accepted. Do not flag these as a finding.
 
 ## 8. Secrets / configuration
 

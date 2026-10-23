@@ -157,7 +157,7 @@ fn normalize_path(raw: &str) -> String {
     // segment instead, so `/graphql%3Bx` and `/x%3F/../graphql` both resolve to
     // `/graphql`, and `/api;v=1/graphql` to `/api/graphql`.
     let path = raw.split(['?', '#']).next().unwrap_or("");
-    let decoded = percent_decode(path);
+    let decoded = decode_stable(path);
     let mut segments: Vec<&str> = Vec::new();
     for seg in decoded.split(['/', '\\']) {
         let seg = seg.split([';', '?', '#']).next().unwrap_or("");
@@ -170,6 +170,24 @@ fn normalize_path(raw: &str) -> String {
         }
     }
     format!("/{}", segments.join("/")).to_ascii_lowercase()
+}
+
+/// Percent-decode repeatedly until the string stops changing. A single pass
+/// leaves a double-encoded sequence partly encoded (`%252e` → `%2e`, `%253f` →
+/// `%3f`), but an origin that re-decodes would resolve it fully; decoding to a
+/// fixed point here keeps endpoint matching and query extraction from being
+/// bypassed by multi-encoded `..`, `?`, `&` or `=`. Bounded so malformed input
+/// cannot loop forever.
+fn decode_stable(s: &str) -> String {
+    let mut out = percent_decode(s);
+    for _ in 0..8 {
+        let again = percent_decode(&out);
+        if again == out {
+            break;
+        }
+        out = again;
+    }
+    out
 }
 
 fn percent_decode(s: &str) -> String {
@@ -480,11 +498,98 @@ struct HttpGraphQL {}
 impl Context for HttpGraphQL {}
 
 impl HttpContext for HttpGraphQL {
+    fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
+        // GraphQL over GET carries the query in the URL query string, which the
+        // body hook never sees. Without inspecting it here, GET
+        // /graphql?query={...} skips every depth/batch/value/blocked-field/debug
+        // check. POST (and other body-bearing methods) are handled in
+        // on_http_request_body.
+        let Some(method) = self.get_property(vec!["request.method"]) else {
+            return Action::Continue;
+        };
+        if method != b"GET" {
+            return Action::Continue;
+        }
+
+        let config = Config::from_env();
+
+        let Some(path) = self.get_property(vec!["request.path"]) else {
+            return Action::Continue;
+        };
+        let raw = String::from_utf8_lossy(&path);
+        if normalize_path(&raw) != normalize_path(&config.endpoint) {
+            return Action::Continue;
+        }
+
+        // Extract the query string. The normal case has a literal `?`: parse from
+        // the RAW remainder so form_get decodes each value exactly once (an
+        // encoded `&`/`=` inside a value must not be split as a separator). A
+        // request with no literal `?` but an encoded one (`%3f`, `%253f`) hiding a
+        // query at this endpoint is obfuscation a real client never sends — decode
+        // to a fixed point to expose it, so a re-decoding origin can't run an
+        // unchecked query behind it.
+        let decoded_qs;
+        let qs = if let Some((_, q)) = raw.split_once('?') {
+            q.split('#').next().unwrap_or(q)
+        } else {
+            decoded_qs = decode_stable(&raw);
+            match decoded_qs.split_once('?') {
+                Some((_, q)) => q.split('#').next().unwrap_or(q),
+                None => return Action::Continue, // no query string → nothing to inspect
+            }
+        };
+
+        // Size parity with the POST path: cap the query-string length before any
+        // parsing (including form_get's scan), so an oversized GET query can't be
+        // force-processed regardless of which params it carries.
+        if let Some(limit) = config.max_body_size {
+            if limit > 0 && qs.len() > limit {
+                self.send_http_response(403, vec![("X-Reject-Reason", "Request body size exceeds limit")], None);
+                return Action::Pause;
+            }
+        }
+
+        // A bare GET to the endpoint (e.g. loading a GraphiQL IDE) carries no
+        // `query` param and passes through untouched; a duplicated `query` key is
+        // a smuggling attempt and is rejected.
+        match form_get(qs, "query") {
+            Ok(None) => return Action::Continue,
+            Ok(Some(_)) => {}
+            Err(e) => {
+                println!("Failed to parse GET query string: {}", e);
+                self.send_http_response(400, vec![("X-Reject-Reason", "Invalid GraphQL request")], None);
+                return Action::Pause;
+            }
+        }
+
+        let ctx = ASTContext::new();
+        let body = match parse_body(&ctx, "application/x-www-form-urlencoded", qs.as_bytes()) {
+            Ok(b) => b,
+            Err(e) => {
+                println!("Failed to parse GET query string: {}", e);
+                self.send_http_response(400, vec![("X-Reject-Reason", "Invalid GraphQL request")], None);
+                return Action::Pause;
+            }
+        };
+
+        if let Err(e) = check_requests(&body, &config) {
+            println!("Request check failed: {}", e);
+            self.send_http_response(403, vec![("X-Reject-Reason", "GraphQL request blocked")], None);
+            return Action::Pause;
+        }
+
+        Action::Continue
+    }
+
     fn on_http_request_body(&mut self, body_size: usize, end_of_stream: bool) -> Action {
         let Some(method) = self.get_property(vec!["request.method"]) else {
             return Action::Continue;
         };
-        if method != b"POST" {
+        // GET is inspected in on_http_request_headers (its query rides in the URL,
+        // not a body). Every other method that carries a GraphQL body — POST, but
+        // also PUT/PATCH/etc. that a non-standard origin might honour — is
+        // inspected here; a bodyless request (OPTIONS/HEAD) is handled below.
+        if method == b"GET" {
             return Action::Continue;
         }
 
@@ -508,6 +613,12 @@ impl HttpContext for HttpGraphQL {
         // streams through untouched above.
         if !end_of_stream {
             return Action::Pause;
+        }
+
+        // Bodyless request at the endpoint (e.g. an OPTIONS/HEAD probe or a CORS
+        // preflight) — nothing to inspect, let it through rather than 400.
+        if body_size == 0 {
+            return Action::Continue;
         }
 
         let Some(body_bytes) = self.get_http_request_body(0, body_size) else {

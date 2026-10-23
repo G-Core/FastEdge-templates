@@ -79,6 +79,10 @@ impl Context for SsoGuard {}
 
 const DEFAULT_AUTH_PREFIX: &str = "/auth";
 const DEFAULT_COOKIE: &str = "sso_session";
+// Forward clock-skew tolerance for the iat check. A token we sign should never
+// carry an issued-at in the future; allow a small skew between the auth-app and
+// the edge before treating a future iat as a fault and failing closed.
+const CLOCK_SKEW_SECS: u64 = 60;
 
 // The header variant injects identity as x-sso-* request headers (x-sso-user
 // plus per-claim headers). Each is cleared/injected via SsoGuard::put_user_header
@@ -221,8 +225,13 @@ impl SsoGuard {
     // header with no matching claim is blanked (set None) rather than truly
     // removed, so the origin MUST treat an empty x-sso-* as absent.
     fn put_user_header(&mut self, name: &str, value: Option<&str>) {
+        // Claim values come from the IdP (a user's display name, etc.) and can
+        // legally contain CR/LF once serde_json unescapes them. Writing those
+        // bytes into a request header would split it and inject an extra header
+        // line into the origin request. Strip control bytes before forwarding.
+        let sanitized = value.map(sanitize_header_value);
         let present = self.get_http_request_header(name).is_some();
-        match value {
+        match sanitized.as_deref() {
             Some(v) if present => self.set_http_request_header(name, Some(v)),
             Some(v) => self.add_http_request_header(name, v),
             None if present => self.set_http_request_header(name, None),
@@ -232,6 +241,13 @@ impl SsoGuard {
 
     fn deny(&mut self, full_path: &str, chooser: &str, reason: &str) -> Action {
         println!("sso_guard: redirect — {reason}");
+        // Build the absolute return URL so a cross-domain login page (LOGIN_PAGE_URL
+        // on a different host than the protected resource) can bounce the user back
+        // to the ORIGINAL resource host, not the login host. The Host header is
+        // client-controllable, but this value is only ever consumed as the auth-app's
+        // `redirect=` param, which validateRedirect gates against SSO_ALLOWED_ORIGINS
+        // before any use — an off-origin host is rejected and falls back to "/", so
+        // the Host header cannot produce an open redirect here.
         let scheme = self
             .get_property(vec!["request.scheme"])
             .and_then(|v| String::from_utf8(v).ok())
@@ -247,6 +263,18 @@ impl SsoGuard {
         self.send_http_response(302, vec![("location", &location)], Some(b""));
         Action::Pause
     }
+}
+
+/// Strip characters a downstream HTTP parser or log pipeline could treat as a
+/// line break and use to forge a header line: all C0/C1 control chars (CR, LF,
+/// NUL, DEL, and NEL/U+0085) plus the Unicode line/paragraph separators
+/// (U+2028/U+2029). Other non-ASCII is kept, so international names and email
+/// addresses in x-sso-* survive intact — restricting to printable ASCII would
+/// corrupt legitimate identity values and is deliberately NOT done.
+fn sanitize_header_value(v: &str) -> String {
+    v.chars()
+        .filter(|&c| !c.is_control() && c != '\u{2028}' && c != '\u{2029}')
+        .collect()
 }
 
 fn is_auth_path(full_path: &str, auth_prefix: &str) -> bool {
@@ -388,6 +416,18 @@ fn verify_jwt(token: &str, variant: Variant) -> Result<JwtClaims, &'static str> 
     {
         if now < nbf {
             return Err("token not yet valid");
+        }
+    }
+
+    // iat is optional; when present, reject a token stamped in the future beyond
+    // the clock-skew allowance. We sign these tokens, so a far-future iat means a
+    // clock fault or a malformed token — fail closed rather than honour it.
+    if let Some(iat) = payload["iat"]
+        .as_u64()
+        .or_else(|| payload["iat"].as_f64().map(|f| f as u64))
+    {
+        if iat > now + CLOCK_SKEW_SECS {
+            return Err("token issued in the future");
         }
     }
 

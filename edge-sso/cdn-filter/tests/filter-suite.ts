@@ -57,11 +57,13 @@ async function signJwt(
   payload: Record<string, unknown>,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  return await new SignJWT(payload)
+  const builder = new SignJWT(payload)
     .setProtectedHeader({ alg, typ: "JWT" })
-    .setIssuedAt(now)
-    .setExpirationTime(now + ttlSeconds)
-    .sign(key);
+    .setExpirationTime(now + ttlSeconds);
+  // Let a caller-supplied `iat` (e.g. a future-issued token for the iat check)
+  // stand; otherwise stamp it to now.
+  if (payload.iat === undefined) builder.setIssuedAt(now);
+  return await builder.sign(key);
 }
 
 export function makeJwt(ttlSeconds: number, sub = "user-123"): Promise<string> {
@@ -195,6 +197,12 @@ export async function runGateSuites(
   const notYetValidJwt = await tier.makeJwt(7200, "user-123", {
     aud: FILTER_AUDIENCE,
     nbf: nowSec + 3600,
+  });
+  // iat an hour in the future, exp two hours out → unexpired, but the iat
+  // future-issued check (beyond skew) must reject it.
+  const futureIatJwt = await tier.makeJwt(7200, "user-123", {
+    aud: FILTER_AUDIENCE,
+    iat: nowSec + 3600,
   });
 
   const cfgDir = await mkdtemp(join(tmpdir(), "sso-filter-cfg-"));
@@ -344,6 +352,18 @@ export async function runGateSuites(
             const r = await runFlow(runner, {
               url: CDN_URL,
               requestHeaders: { cookie: `${CUSTOM_COOKIE}=${notYetValidJwt}` },
+            });
+            if (r.finalResponse.status !== 302) {
+              throw new Error(`expected 302, got ${r.finalResponse.status}`);
+            }
+          },
+        },
+        {
+          name: "future-issued JWT (iat ahead of skew) → 302",
+          run: async (runner) => {
+            const r = await runFlow(runner, {
+              url: CDN_URL,
+              requestHeaders: { cookie: `${CUSTOM_COOKIE}=${futureIatJwt}` },
             });
             if (r.finalResponse.status !== 302) {
               throw new Error(`expected 302, got ${r.finalResponse.status}`);

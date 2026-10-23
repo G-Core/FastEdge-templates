@@ -34,6 +34,10 @@ impl Context for OtpGuard {}
 const DEFAULT_COOKIE: &str = "mfa_session";
 const DEFAULT_AUTH_PREFIX: &str = "/auth/totp";
 const EXPECTED_ALG: &str = "HS256";
+// Forward clock-skew tolerance for the iat check. A token we sign should never
+// carry an issued-at in the future; allow a small skew between otp-app and the
+// edge before treating a future iat as a fault and failing closed.
+const CLOCK_SKEW_SECS: u64 = 60;
 
 impl HttpContext for OtpGuard {
     fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
@@ -237,6 +241,18 @@ fn verify_jwt(token: &str) -> Result<JwtClaims, &'static str> {
     {
         if now < nbf {
             return Err("token not yet valid");
+        }
+    }
+
+    // Honour iat when present — reject a token stamped in the future beyond the
+    // clock-skew allowance. We sign these tokens, so a far-future iat means a
+    // clock fault or a malformed token; fail closed. Absent iat is fine.
+    if let Some(iat) = payload["iat"]
+        .as_u64()
+        .or_else(|| payload["iat"].as_f64().map(|f| f as u64))
+    {
+        if iat > now + CLOCK_SKEW_SECS {
+            return Err("token issued in the future");
         }
     }
 

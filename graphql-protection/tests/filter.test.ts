@@ -70,6 +70,16 @@ function post(runner: Runner, path: string, body: string, headers: Record<string
 const gql = (query: string, variables?: unknown) => JSON.stringify({ query, variables });
 const FORM = { "content-type": "application/x-www-form-urlencoded" };
 
+// GraphQL over GET: query/variables ride in the URL query string.
+function get(runner: Runner, path: string): Promise<Flow> {
+  return runFlow(runner, { url: `${ORIGIN}${path}`, method: "GET" });
+}
+function gqlGetPath(query: string, variables?: unknown): string {
+  let p = `/graphql?query=${encodeURIComponent(query)}`;
+  if (variables !== undefined) p += `&variables=${encodeURIComponent(JSON.stringify(variables))}`;
+  return p;
+}
+
 const tempDirs: string[] = [];
 let totalFailed = 0;
 
@@ -136,12 +146,38 @@ await suite(
       run: async (r) => invalid(await post(r, "/graphql", `query=${encodeURIComponent(OK)}&query=${encodeURIComponent(INTROSPECTION)}`, FORM)),
     },
     // Path variants the CDN passes through un-normalised: all must be inspected.
-    ...["/graphql?x=1", "/graphql/", "//graphql", "/GraphQL", "/%67raphql", "/api/../graphql", "/graphql;jsessionid=1", "/graphql%3Bjsessionid=1", "/graphql%3Fx", "/x%3F/../graphql", "/x%23/../graphql", "/./graphql"].map((p) => ({
+    // Includes double-encoded `..` (%252e%252e): a single decode leaves %2e%2e,
+    // which an origin re-decodes to `..` and resolves to /graphql.
+    ...["/graphql?x=1", "/graphql/", "//graphql", "/GraphQL", "/%67raphql", "/api/../graphql", "/graphql;jsessionid=1", "/graphql%3Bjsessionid=1", "/graphql%3Fx", "/x%3F/../graphql", "/x%23/../graphql", "/./graphql", "/%252e%252e/graphql", "/foo/%252e%252e/graphql"].map((p) => ({
       name: `path variant ${p} → inspected (403)`,
       run: async (r: Runner) => blocked(await post(r, p, gql(INTROSPECTION))),
     })),
     { name: "other path → not inspected", run: async (r) => assertAllowed(await post(r, "/other", gql(INTROSPECTION))) },
     { name: "/graphql-v2 → not inspected", run: async (r) => assertAllowed(await post(r, "/graphql-v2", gql(INTROSPECTION))) },
+    // GraphQL over GET: the query rides in the URL query string, which the body
+    // hook never sees. These must be inspected, not waved through.
+    { name: "GET introspection → 403", run: async (r) => blocked(await get(r, gqlGetPath(INTROSPECTION))) },
+    { name: "GET depth over limit → 403", run: async (r) => blocked(await get(r, gqlGetPath("{ a { b { c { d } } } }"))) },
+    { name: "GET blocked field via variables debug → 403", run: async (r) => blocked(await get(r, gqlGetPath("{ user(id: 1, debug: true) { name } }"))) },
+    { name: "GET valid query → allowed", run: async (r) => assertAllowed(await get(r, gqlGetPath(OK))) },
+    { name: "GET without query param (GraphiQL) → allowed", run: async (r) => assertAllowed(await get(r, "/graphql")) },
+    { name: "GET duplicate query key → 400", run: async (r) => invalid(await get(r, `/graphql?query=${encodeURIComponent(OK)}&query=${encodeURIComponent(INTROSPECTION)}`)) },
+    { name: "GET query over MAX_BODY_SIZE → 403", run: async (r) => assertStatus(await get(r, gqlGetPath(`{ user(name: "${"a".repeat(2500)}") { id } }`)), 403) },
+    { name: "GET oversized non-query param still capped → 403", run: async (r) => assertStatus(await get(r, `/graphql?pad=${"a".repeat(2500)}`), 403) },
+    // A literal `?` inside the query string must not hide params from inspection.
+    { name: "GET query behind a literal ? → 403", run: async (r) => blocked(await get(r, `/graphql?pad=?&query=${encodeURIComponent(INTROSPECTION)}`)) },
+    // Encoded `?` delimiter: no literal `?`, but a re-decoding origin would run it.
+    { name: "GET query behind encoded ? (%3F) → 403", run: async (r) => blocked(await get(r, `/graphql%3Fquery=${encodeURIComponent(INTROSPECTION)}`)) },
+    { name: "GET query behind double-encoded ? (%253F) → 403", run: async (r) => blocked(await get(r, `/graphql%253Fquery=${encodeURIComponent(INTROSPECTION)}`)) },
+    // Legit query whose value contains an encoded `&` must NOT be mis-split → allowed.
+    { name: "GET query with encoded & in a value → allowed", run: async (r) => assertAllowed(await get(r, gqlGetPath('{ user(x: "a&b") { id } }'))) },
+    { name: "GET oversized param behind a literal ? → 403", run: async (r) => assertStatus(await get(r, `/graphql?z=?&pad=${"a".repeat(2500)}`), 403) },
+    { name: "GET other path → not inspected", run: async (r) => assertAllowed(await get(r, `/other?query=${encodeURIComponent(INTROSPECTION)}`)) },
+    { name: "GET path variant //graphql → inspected (403)", run: async (r) => blocked(await get(r, `//graphql?query=${encodeURIComponent(INTROSPECTION)}`)) },
+    // Non-GET, non-POST methods that carry a GraphQL body must also be inspected.
+    { name: "PUT introspection body → 403", run: async (r) => blocked(await runFlow(r, { url: `${ORIGIN}/graphql`, method: "PUT", requestHeaders: JSON_CT, requestBody: gql(INTROSPECTION) })) },
+    { name: "PATCH introspection body → 403", run: async (r) => blocked(await runFlow(r, { url: `${ORIGIN}/graphql`, method: "PATCH", requestHeaders: JSON_CT, requestBody: gql(INTROSPECTION) })) },
+    { name: "OPTIONS preflight (no body) → allowed", run: async (r) => assertAllowed(await runFlow(r, { url: `${ORIGIN}/graphql`, method: "OPTIONS" })) },
   ],
 );
 
