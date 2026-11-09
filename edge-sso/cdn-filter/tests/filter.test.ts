@@ -366,6 +366,8 @@ await track(runVariantFailClosedSuite(WASM));
                   cookie: `sso_session=${jwtSubOnly}`,
                   "x-sso-user": "admin@corp.com",
                   "x-sso-email": "attacker@evil.com",
+                  "x-sso-role": "admin",
+                  "X-SSO-Groups": "admins,superusers",
                 },
               });
               if (r.hookResults.onRequestHeaders.returnCode !== 0) {
@@ -388,6 +390,15 @@ await track(runVariantFailClosedSuite(WASM));
                 throw new Error(
                   `expected spoofed X-SSO-Email to be stripped, got '${JSON.stringify(email)}'`,
                 );
+              }
+              // Unmanaged x-sso-* headers must not reach the origin either.
+              for (const h of ["x-sso-role", "x-sso-groups"]) {
+                const v = out[h];
+                if (v !== undefined && v !== "") {
+                  throw new Error(
+                    `expected spoofed ${h} to be stripped, got '${JSON.stringify(v)}'`,
+                  );
+                }
               }
             },
           },
