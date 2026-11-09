@@ -88,7 +88,7 @@ jobs:
         uses: actions/setup-node@v6
         continue-on-error: true
         with:
-          node-version: "24.12.0"
+          node-version: "24.22.1"
 
       - name: Install Claude CLI
         continue-on-error: true
