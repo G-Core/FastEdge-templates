@@ -87,7 +87,16 @@ const CLOCK_SKEW_SECS: u64 = 60;
 // The header variant injects identity as x-sso-* request headers (x-sso-user
 // plus per-claim headers). Each is cleared/injected via SsoGuard::put_user_header
 // so a client cannot smuggle a spoofed copy past the filter, while respecting
-// the CDN's request-header propagation rules (see that method).
+// the CDN's request-header propagation rules (see that method). Any other
+// client-supplied x-sso-* header is blanked before injection.
+const MANAGED_SSO_HEADERS: [&str; 6] = [
+    "x-sso-user",
+    "x-sso-email",
+    "x-sso-name",
+    "x-sso-picture",
+    "x-sso-given-name",
+    "x-sso-family-name",
+];
 
 impl HttpContext for SsoGuard {
     fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
@@ -96,8 +105,12 @@ impl HttpContext for SsoGuard {
             .and_then(|v| String::from_utf8(v).ok())
             .unwrap_or_default();
 
+        // An empty AUTH_PREFIX would make the bypass prefix "/" and exempt every
+        // path from the session check (fail open), so treat empty as unset.
         let auth_prefix = env::var("AUTH_PREFIX")
-            .unwrap_or_else(|_| DEFAULT_AUTH_PREFIX.to_string());
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| DEFAULT_AUTH_PREFIX.to_string());
 
         // The auth-app serves AUTH_PREFIX/** as an origin under single-domain
         // routing; gating it would redirect-loop the login flow.
@@ -197,7 +210,22 @@ impl HttpContext for SsoGuard {
         // in the client request (set replaces it) or when we add() a new line;
         // set() of a brand-new header is dropped before the origin. put_user_header
         // therefore chooses set vs add based on the header's original presence.
-        if variant.inject_user_header() {
+        //
+        // Clear client-supplied x-sso-* headers in every variant, so an origin
+        // trusting the prefix never sees a spoofed one (e.g. after switching a
+        // deployment from header to gate-only). In the header variant the managed
+        // set is skipped here because put_user_header overwrites or clears it.
+        // Blanked, not removed — same origin contract as put_user_header's None case.
+        let inject = variant.inject_user_header();
+        for (name, _) in self.get_http_request_headers() {
+            let lower = name.to_ascii_lowercase();
+            if lower.starts_with("x-sso-")
+                && !(inject && MANAGED_SSO_HEADERS.contains(&lower.as_str()))
+            {
+                self.set_http_request_header(&name, None);
+            }
+        }
+        if inject {
             self.put_user_header("x-sso-user", claims.sub.as_deref());
             self.put_user_header("x-sso-email", claims.email.as_deref());
             self.put_user_header("x-sso-name", claims.name.as_deref());

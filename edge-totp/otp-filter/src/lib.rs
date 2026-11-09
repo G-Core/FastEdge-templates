@@ -46,8 +46,12 @@ impl HttpContext for OtpGuard {
             .and_then(|v| String::from_utf8(v).ok())
             .unwrap_or_default();
 
+        // An empty AUTH_PREFIX would make the bypass prefix "/" and exempt every
+        // path from the OTP check (fail open), so treat empty as unset.
         let auth_prefix = env::var("AUTH_PREFIX")
-            .unwrap_or_else(|_| DEFAULT_AUTH_PREFIX.to_string());
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| DEFAULT_AUTH_PREFIX.to_string());
 
         // Bypass the totp-app paths (challenge, verify, enroll, JWKS) and /health.
         // Gating these would redirect-loop the TOTP flow.
@@ -99,6 +103,19 @@ impl HttpContext for OtpGuard {
             "otp_guard: authorized — valid {cookie_name} (sub={}) for {full_path}",
             claims.sub.as_deref().unwrap_or("<none>")
         );
+
+        // Strip the session cookie so the origin never sees the raw token.
+        let stripped = cookie_header
+            .split(';')
+            .map(str::trim)
+            .filter(|p| !p.starts_with(&format!("{cookie_name}=")))
+            .collect::<Vec<_>>()
+            .join("; ");
+        if stripped.is_empty() {
+            self.set_http_request_header("cookie", None);
+        } else {
+            self.set_http_request_header("cookie", Some(&stripped));
+        }
 
         Action::Continue
     }

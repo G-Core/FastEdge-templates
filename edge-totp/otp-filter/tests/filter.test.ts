@@ -163,6 +163,31 @@ await suite(
       run: async (runner) => assertContinue(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(validJwt) })),
     },
     {
+      name: "valid mfa_session stripped before origin, other cookies kept",
+      run: async (runner) => {
+        const r = await runFlow(runner, {
+          url: PROTECTED_URL,
+          requestHeaders: { cookie: `app_sid=abc; ${DEFAULT_COOKIE}=${validJwt}; theme=dark` },
+        });
+        assertContinue(r);
+        const sent = headerValue(r.hookResults.onRequestHeaders.output.request.headers["cookie"] as string | string[] | undefined);
+        if (sent !== "app_sid=abc; theme=dark") {
+          throw new Error(`expected cookie 'app_sid=abc; theme=dark', got ${JSON.stringify(sent)}`);
+        }
+      },
+    },
+    {
+      name: "only mfa_session cookie → cookie header cleared",
+      run: async (runner) => {
+        const r = await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(validJwt) });
+        assertContinue(r);
+        const sent = r.hookResults.onRequestHeaders.output.request.headers["cookie"];
+        if (sent !== undefined && sent !== "") {
+          throw new Error(`expected cookie cleared, got ${JSON.stringify(sent)}`);
+        }
+      },
+    },
+    {
       name: "no cookie → 302 to MFA_LOGIN_URL with relative-path redirect",
       run: async (runner) => {
         const r = await runFlow(runner, { url: PROTECTED_URL, requestHeaders: {} });
@@ -254,6 +279,21 @@ await suite(
     { name: "old default /auth/totp/ NOT bypassed when AUTH_PREFIX overridden → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: "https://cdn.example.com/auth/totp/challenge", requestHeaders: {} }), 302) },
     { name: "valid token in custom cookie name → Continue", run: async (runner) => assertContinue(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: { cookie: `my_mfa=${validJwt}` } })) },
     { name: "token in default cookie name NOT honoured when overridden → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(validJwt) }), 302) },
+  ],
+);
+
+// --- Empty AUTH_PREFIX must not bypass everything ----------------------------
+await suite(
+  "Empty AUTH_PREFIX falls back to default (no fail-open):",
+  [
+    SECRET_KEY_ENV,
+    `FASTEDGE_VAR_ENV_MFA_AUDIENCE=${AUDIENCE}`,
+    `FASTEDGE_VAR_ENV_MFA_LOGIN_URL=${LOGIN_URL}`,
+    `FASTEDGE_VAR_ENV_AUTH_PREFIX=`,
+  ],
+  [
+    { name: "protected path with no cookie → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: {} }), 302) },
+    { name: "default /auth/totp/ still bypassed", run: async (runner) => assertContinue(await runFlow(runner, { url: "https://cdn.example.com/auth/totp/challenge", requestHeaders: {} })) },
   ],
 );
 
