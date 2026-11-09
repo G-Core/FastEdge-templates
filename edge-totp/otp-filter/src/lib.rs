@@ -46,8 +46,12 @@ impl HttpContext for OtpGuard {
             .and_then(|v| String::from_utf8(v).ok())
             .unwrap_or_default();
 
+        // An empty AUTH_PREFIX would make the bypass prefix "/" and exempt every
+        // path from the OTP check (fail open), so treat empty as unset.
         let auth_prefix = env::var("AUTH_PREFIX")
-            .unwrap_or_else(|_| DEFAULT_AUTH_PREFIX.to_string());
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| DEFAULT_AUTH_PREFIX.to_string());
 
         // Bypass the totp-app paths (challenge, verify, enroll, JWKS) and /health.
         // Gating these would redirect-loop the TOTP flow.

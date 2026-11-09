@@ -448,10 +448,70 @@ await track(runVariantFailClosedSuite(WASM));
               }
             },
           },
+          {
+            name: "gate-only: spoofed x-sso-* headers cleared",
+            run: async (runner) => {
+              const r = await runFlow(runner, {
+                url: "built-in",
+                requestHeaders: {
+                  cookie: `${DEFAULT_COOKIE}=${jwt}`,
+                  "x-sso-user": "admin@corp.com",
+                  "x-sso-role": "admin",
+                },
+              });
+              const out = r.hookResults.onRequestHeaders.output.request.headers;
+              for (const h of ["x-sso-user", "x-sso-role"]) {
+                const v = out[h];
+                if (v !== undefined && v !== "") {
+                  throw new Error(
+                    `expected spoofed ${h} cleared in gate-only, got '${JSON.stringify(v)}'`,
+                  );
+                }
+              }
+            },
+          },
         ],
       }),
     )) as SuiteResult;
     report("Suite — gate-only does not inject headers:", suite);
+    totalFailed += suite.failed;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+// --- Empty AUTH_PREFIX must fall back to the default, not bypass every path ---
+{
+  const dir = await mkdtemp(join(tmpdir(), "empty-auth-prefix-"));
+  await writeFile(
+    join(dir, ".env"),
+    [
+      `FASTEDGE_VAR_SECRET_SESSION_SECRET=${SESSION_SECRET}`,
+      AUDIENCE_ENV,
+      "FASTEDGE_VAR_ENV_SSO_VARIANT=gate-only",
+      "FASTEDGE_VAR_ENV_AUTH_PREFIX=",
+      "",
+    ].join("\n"),
+  );
+  try {
+    const suite = (await runTestSuite(
+      defineTestSuite({
+        wasmPath: WASM,
+        runnerConfig: { dotenv: { enabled: true, path: dir } },
+        tests: [
+          {
+            name: "empty AUTH_PREFIX: protected path with no cookie → 302",
+            run: async (runner) => {
+              const r = await runFlow(runner, { url: CDN_URL, requestHeaders: {} });
+              if (r.finalResponse.status !== 302) {
+                throw new Error(`expected 302, got ${r.finalResponse.status}`);
+              }
+            },
+          },
+        ],
+      }),
+    )) as SuiteResult;
+    report("Suite — empty AUTH_PREFIX does not fail open:", suite);
     totalFailed += suite.failed;
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});

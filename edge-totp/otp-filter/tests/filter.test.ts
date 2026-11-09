@@ -257,6 +257,21 @@ await suite(
   ],
 );
 
+// --- Empty AUTH_PREFIX must not bypass everything ----------------------------
+await suite(
+  "Empty AUTH_PREFIX falls back to default (no fail-open):",
+  [
+    SECRET_KEY_ENV,
+    `FASTEDGE_VAR_ENV_MFA_AUDIENCE=${AUDIENCE}`,
+    `FASTEDGE_VAR_ENV_MFA_LOGIN_URL=${LOGIN_URL}`,
+    `FASTEDGE_VAR_ENV_AUTH_PREFIX=`,
+  ],
+  [
+    { name: "protected path with no cookie → 302", run: async (runner) => assertStatus(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: {} }), 302) },
+    { name: "default /auth/totp/ still bypassed", run: async (runner) => assertContinue(await runFlow(runner, { url: "https://cdn.example.com/auth/totp/challenge", requestHeaders: {} })) },
+  ],
+);
+
 for (const dir of tempDirs) await rm(dir, { recursive: true, force: true }).catch(() => {});
 console.log("");
 process.exit(totalFailed > 0 ? 1 : 0);
