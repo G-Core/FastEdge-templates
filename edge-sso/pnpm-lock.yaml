@@ -10,8 +10,8 @@ catalogs:
       specifier: ^2.5.0
       version: 2.5.0
     '@gcoredev/fastedge-test':
-      specifier: ^0.2.4
-      version: 0.2.4
+      specifier: ^0.2.8
+      version: 0.2.8
     '@peculiar/x509':
       specifier: ^1.14.3
       version: 1.14.3
@@ -19,11 +19,11 @@ catalogs:
       specifier: ^24.6.0
       version: 24.13.2
     '@xmldom/xmldom':
-      specifier: ^0.8.11
-      version: 0.8.13
+      specifier: ^0.8.15
+      version: 0.8.15
     hono:
-      specifier: ^4.9.8
-      version: 4.12.25
+      specifier: ^4.13.17
+      version: 4.13.17
     jose:
       specifier: ^6.2.2
       version: 6.2.3
@@ -51,23 +51,23 @@ importers:
         version: 1.14.3
       '@xmldom/xmldom':
         specifier: 'catalog:'
-        version: 0.8.13
+        version: 0.8.15
       hono:
         specifier: 'catalog:'
-        version: 4.12.25
+        version: 4.13.17
       jose:
         specifier: 'catalog:'
         version: 6.2.3
       xmldsigjs:
         specifier: 'catalog:'
-        version: 2.8.7(@xmldom/xmldom@0.8.13)
+        version: 2.8.7(@xmldom/xmldom@0.8.15)
     devDependencies:
       '@gcoredev/fastedge-sdk-js':
         specifier: 'catalog:'
         version: 2.5.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
       '@gcoredev/fastedge-test':
         specifier: 'catalog:'
-        version: 0.2.4(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/react@19.2.17)
+        version: 0.2.8(@types/react@19.2.17)
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
@@ -85,7 +85,7 @@ importers:
     devDependencies:
       '@gcoredev/fastedge-test':
         specifier: 'catalog:'
-        version: 0.2.4(@types/react@19.2.17)
+        version: 0.2.8(@types/react@19.2.17)
       jose:
         specifier: 'catalog:'
         version: 6.2.3
@@ -94,9 +94,6 @@ importers:
         version: 4.22.4
 
 packages:
-
-  '@assemblyscript/wasi-shim@0.1.0':
-    resolution: {integrity: sha512-fSLH7MdJHf2uDW5llA5VCF/CG62Jp2WkYGui9/3vIWs3jDhViGeQF7nMYLUjpigluM5fnq61I6obtCETy39FZw==}
 
   '@babel/regjsgen@0.8.0':
     resolution: {integrity: sha512-x/rqGMdzj+fWZvCOYForTghzbtqPDZ5gPwaoNGHdgDfF2QA/XZbCBp4Moo5scrkAMPhB7z26XM/AaHuIJdgauA==}
@@ -375,13 +372,10 @@ packages:
     engines: {node: '>=22', pnpm: '>=10'}
     hasBin: true
 
-  '@gcoredev/fastedge-test@0.2.4':
-    resolution: {integrity: sha512-1ABCIfQS0Cm8NjWL0ffPwB2wiOrMpXTuOf/s1ztINw9W0gmYLo/uDG40TYnIY+s7XZCfrrFznGhqumklF9Supg==}
+  '@gcoredev/fastedge-test@0.2.8':
+    resolution: {integrity: sha512-dqa9oP2A0aZV4/J/MZhKA7jqSRdkbLzmjvRwxXYrqDIDWMNtXNsDkY2avPhEMAB1HhszPm2tYJn9g6YDebT/IQ==}
     engines: {node: '>=22.12'}
     hasBin: true
-
-  '@gcoredev/proxy-wasm-sdk-as@1.2.3':
-    resolution: {integrity: sha512-aBuyNAXnPzgFFUPWNGcxkmcCBvMvyq32D9oBhc8ksQinj80ASNBiLQzF4UDOwProO7+f6te41OZI+JKsP5thmQ==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -658,8 +652,8 @@ packages:
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
-  '@xmldom/xmldom@0.8.13':
-    resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
+  '@xmldom/xmldom@0.8.15':
+    resolution: {integrity: sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA==}
     engines: {node: '>=10.0.0'}
 
   accepts@1.3.8:
@@ -715,8 +709,8 @@ packages:
   bl@1.2.3:
     resolution: {integrity: sha512-pvcNpa0UU69UT341rO6AYy4FVAIkUHuZXRIWbq+zHnsVcRzDDjIAhGuuYoi0d//cwIwtt4pkpKycWEfjdV+vww==}
 
-  body-parser@1.20.5:
-    resolution: {integrity: sha512-3grm+/2tUOvu2cjJkvsIxrv/wVpfXQW4PsQHYm7yk4vfpu7Ekl6nEsYBoJUL6qDwZUx8wUhQ8tR2qz+ad9c9OA==}
+  body-parser@1.20.9:
+    resolution: {integrity: sha512-FISIQxV5u91Y9gvuFq3q/tA/qTqLJn3AhRcEvyozyhJTh5OBFFtv827AdHU7Rbyct4r+Ba1/99oFa1Y3yuFsdw==}
     engines: {node: '>= 0.8', npm: 1.2.8000 || >= 1.4.16}
 
   buffer-alloc-unsafe@1.1.0:
@@ -976,8 +970,8 @@ packages:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
-  hono@4.12.25:
-    resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
+  hono@4.13.17:
+    resolution: {integrity: sha512-vZIcbkvjOR5hHRWERbGkr8fGfF0GGM1ooYkuH448iO3b2AdVEr3AXZSw4Z3Kn+1L5z0CVoVeyV29VGYmFh05kQ==}
     engines: {node: '>=16.9.0'}
 
   http-errors@2.0.1:
@@ -1225,8 +1219,8 @@ packages:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
     engines: {node: '>= 6'}
 
-  proxy-addr@2.0.7:
-    resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
+  proxy-addr@2.0.8:
+    resolution: {integrity: sha512-5nnx0yGyVUcY6t9RnWcARWtwT9F1D8O9rt08htPvnd49W1IgZtmLkhu9WfMzQj1cFxjHIO6connUNVW5k7AVyQ==}
     engines: {node: '>= 0.10'}
 
   pvtsutils@1.3.6:
@@ -1236,8 +1230,12 @@ packages:
     resolution: {integrity: sha512-KTqnxsgGiQ6ZAzZCVlJH5eOjSnvlyEgx1m8bkRJfOhmGRqfo5KLvmAlACQkrjEtOQ4B7wF9TdSLIs9O90MX9xA==}
     engines: {node: '>=16.0.0'}
 
-  qs@6.15.2:
-    resolution: {integrity: sha512-Rzq0KEyX/w/tEybncDgdkZrJgVUsUMk3xjh3t5bv3S1HTAtg+uOYt72+ZfwiQwKdysThkTBdL/rTi6HDmX9Ddw==}
+  qs@6.15.4:
+    resolution: {integrity: sha512-d1zNHS+ltAfSgTmYjzXXH9gy9d6pEb33n0ZtUUkukA8UHhFSjv2mSYRiePyjbRiJh0g5sFJbMdAtMIg01Xf5/w==}
+    engines: {node: '>=0.6'}
+
+  qs@6.16.2:
+    resolution: {integrity: sha512-VYdnB5S7/0IeXzBacUtwNAaM6d7Y/PgYnNC7bJCI6meqA/OgnsQbZMtVW8Dt2D1PHgbHGtYmhSoEIgvt7xZ2ZA==}
     engines: {node: '>=0.6'}
 
   range-parser@1.2.1:
@@ -1329,8 +1327,8 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.4:
-    resolution: {integrity: sha512-VsC6n6vz1ihYYyZZwX7YZSF5l5x36ca17OC+a69h94YqB7X6XLwf+5MOgynYir2SLFUbl8gIYvBo8K8RoNQ6bQ==}
+  shell-quote@1.12.0:
+    resolution: {integrity: sha512-PcByqNyT/38F2kDNi006HAMRJaULuBzq/FOsw3qdZvX/GA9W/jamDaRskgHjubHiftXK5sIFxLNkvrXUwcof6Q==}
     engines: {node: '>= 0.4'}
 
   side-channel-list@1.0.1:
@@ -1443,9 +1441,9 @@ packages:
   undici-types@7.18.2:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
-  undici@6.26.0:
-    resolution: {integrity: sha512-4yqz8a3n5HmGTlsbADNtr/dJlhkh/55Rq798G6ibiULcXbDtaLpTl1pvdqcbFfeoj3iSi52lePFM7h9H21cw/A==}
-    engines: {node: '>=18.17'}
+  undici@7.30.2:
+    resolution: {integrity: sha512-mLyPQnHwUxaM/rideoK/+KL8DaAJLRl4aBCfmX444aCSLnIaomqPLtNRe2jdCYcsk5wZzXrDIQC8ZeYNRAYyIA==}
+    engines: {node: '>=20.18.1'}
 
   unicode-canonical-property-names-ecmascript@2.0.1:
     resolution: {integrity: sha512-dA8WbNeb2a6oQzAQ55YlT5vQAWGV9WXOsi3SskE3bcCdM0P4SDd+24zS/OCacdRq5BkdsRj9q3Pg6YyQoxIGqg==}
@@ -1539,8 +1537,8 @@ packages:
     peerDependencies:
       zod: ^3.25.28 || ^4
 
-  zod@4.4.3:
-    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
   zustand-debounce@2.3.1:
     resolution: {integrity: sha512-QhCM/eXU8tGKaQk5GRvWMeSivj19hcU00SFvo7fUSq1aJK2vYwYpNUvJl+YuKXneuMGIXHjvoou2irpX4OTu2w==}
@@ -1567,31 +1565,11 @@ packages:
 
 snapshots:
 
-  '@assemblyscript/wasi-shim@0.1.0': {}
-
   '@babel/regjsgen@0.8.0': {}
-
-  '@bytecodealliance/componentize-js@0.19.3':
-    dependencies:
-      '@bytecodealliance/jco': 1.23.0
-      '@bytecodealliance/wizer': 10.0.0
-      es-module-lexer: 1.7.0
-      oxc-parser: 0.76.0
 
   '@bytecodealliance/componentize-js@0.19.3(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
     dependencies:
       '@bytecodealliance/jco': 1.23.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
-      '@bytecodealliance/wizer': 10.0.0
-      es-module-lexer: 1.7.0
-      oxc-parser: 0.76.0
-    transitivePeerDependencies:
-      - '@emnapi/core'
-      - '@emnapi/runtime'
-
-  '@bytecodealliance/componentize-js@0.21.0':
-    dependencies:
-      '@bytecodealliance/jco': 1.23.0
-      '@bytecodealliance/weval': 0.4.1(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
       '@bytecodealliance/wizer': 10.0.0
       es-module-lexer: 1.7.0
       oxc-parser: 0.76.0
@@ -1606,21 +1584,6 @@ snapshots:
       '@bytecodealliance/wizer': 10.0.0
       es-module-lexer: 1.7.0
       oxc-parser: 0.76.0
-    transitivePeerDependencies:
-      - '@emnapi/core'
-      - '@emnapi/runtime'
-
-  '@bytecodealliance/jco@1.23.0':
-    dependencies:
-      '@bytecodealliance/componentize-js': 0.21.0
-      '@bytecodealliance/componentize-js-0-19-3': '@bytecodealliance/componentize-js@0.19.3'
-      '@bytecodealliance/preview2-shim': 0.17.9
-      '@bytecodealliance/preview3-shim': 0.1.2
-      binaryen: 123.0.0
-      commander: 14.0.3
-      mkdirp: 3.0.1
-      ora: 8.2.0
-      terser: 5.48.0
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -1804,24 +1767,6 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@gcoredev/fastedge-sdk-js@2.5.0':
-    dependencies:
-      '@bytecodealliance/jco': 1.23.0
-      '@bytecodealliance/wizer': 11.0.3
-      acorn: 8.17.0
-      acorn-walk: 8.3.5
-      arg: 5.0.2
-      enquirer: 2.4.1
-      esbuild: 0.28.1
-      event-target-polyfill: 0.0.4
-      magic-string: 0.30.21
-      npm-run-all2: 8.0.4
-      prompts: 2.4.2
-      regexpu-core: 5.3.2
-    transitivePeerDependencies:
-      - '@emnapi/core'
-      - '@emnapi/runtime'
-
   '@gcoredev/fastedge-sdk-js@2.5.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
     dependencies:
       '@bytecodealliance/jco': 1.23.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
@@ -1840,57 +1785,25 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  '@gcoredev/fastedge-test@0.2.4(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)(@types/react@19.2.17)':
+  '@gcoredev/fastedge-test@0.2.8(@types/react@19.2.17)':
     dependencies:
-      '@assemblyscript/wasi-shim': 0.1.0
-      '@gcoredev/fastedge-sdk-js': 2.5.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
-      '@gcoredev/proxy-wasm-sdk-as': 1.2.3
       '@types/ws': 8.18.1
       express: 4.22.2
       immer: 11.1.8
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
-      undici: 6.26.0
+      undici: 7.30.2
       ws: 8.21.0
-      zod: 4.4.3
-      zod-to-json-schema: 3.25.2(zod@4.4.3)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.2(zod@4.6.7)
       zustand: 5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7)
       zustand-debounce: 2.3.1(zustand@5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7))
     transitivePeerDependencies:
-      - '@emnapi/core'
-      - '@emnapi/runtime'
       - '@types/react'
       - bufferutil
       - supports-color
       - use-sync-external-store
       - utf-8-validate
-
-  '@gcoredev/fastedge-test@0.2.4(@types/react@19.2.17)':
-    dependencies:
-      '@assemblyscript/wasi-shim': 0.1.0
-      '@gcoredev/fastedge-sdk-js': 2.5.0
-      '@gcoredev/proxy-wasm-sdk-as': 1.2.3
-      '@types/ws': 8.18.1
-      express: 4.22.2
-      immer: 11.1.8
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-      undici: 6.26.0
-      ws: 8.21.0
-      zod: 4.4.3
-      zod-to-json-schema: 3.25.2(zod@4.4.3)
-      zustand: 5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7)
-      zustand-debounce: 2.3.1(zustand@5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7))
-    transitivePeerDependencies:
-      - '@emnapi/core'
-      - '@emnapi/runtime'
-      - '@types/react'
-      - bufferutil
-      - supports-color
-      - use-sync-external-store
-      - utf-8-validate
-
-  '@gcoredev/proxy-wasm-sdk-as@1.2.3': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -2167,7 +2080,7 @@ snapshots:
     dependencies:
       '@types/node': 24.13.2
 
-  '@xmldom/xmldom@0.8.13': {}
+  '@xmldom/xmldom@0.8.15': {}
 
   accepts@1.3.8:
     dependencies:
@@ -2211,7 +2124,7 @@ snapshots:
       readable-stream: 2.3.8
       safe-buffer: 5.2.1
 
-  body-parser@1.20.5:
+  body-parser@1.20.9:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
@@ -2221,7 +2134,7 @@ snapshots:
       http-errors: 2.0.1
       iconv-lite: 0.4.24
       on-finished: 2.4.1
-      qs: 6.15.2
+      qs: 6.16.2
       raw-body: 2.5.3
       type-is: 1.6.18
       unpipe: 1.0.0
@@ -2422,7 +2335,7 @@ snapshots:
     dependencies:
       accepts: 1.3.8
       array-flatten: 1.1.1
-      body-parser: 1.20.5
+      body-parser: 1.20.9
       content-disposition: 0.5.4
       content-type: 1.0.5
       cookie: 0.7.2
@@ -2440,8 +2353,8 @@ snapshots:
       on-finished: 2.4.1
       parseurl: 1.3.3
       path-to-regexp: 0.1.13
-      proxy-addr: 2.0.7
-      qs: 6.15.2
+      proxy-addr: 2.0.8
+      qs: 6.15.4
       range-parser: 1.2.1
       safe-buffer: 5.2.1
       send: 0.19.2
@@ -2534,7 +2447,7 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hono@4.12.25: {}
+  hono@4.13.17: {}
 
   http-errors@2.0.1:
     dependencies:
@@ -2645,7 +2558,7 @@ snapshots:
       picomatch: 4.0.4
       pidtree: 0.6.1
       read-package-json-fast: 4.0.0
-      shell-quote: 1.8.4
+      shell-quote: 1.12.0
       which: 5.0.0
 
   npm-run-all2@9.0.1:
@@ -2656,7 +2569,7 @@ snapshots:
       picomatch: 4.0.4
       pidtree: 0.6.1
       read-package-json-fast: 6.0.0
-      shell-quote: 1.8.4
+      shell-quote: 1.12.0
       which: 7.0.0
 
   object-assign@4.1.1: {}
@@ -2747,7 +2660,7 @@ snapshots:
       kleur: 3.0.3
       sisteransi: 1.0.5
 
-  proxy-addr@2.0.7:
+  proxy-addr@2.0.8:
     dependencies:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
@@ -2758,8 +2671,14 @@ snapshots:
 
   pvutils@1.1.5: {}
 
-  qs@6.15.2:
+  qs@6.15.4:
     dependencies:
+      es-define-property: 1.0.1
+      side-channel: 1.1.1
+
+  qs@6.16.2:
+    dependencies:
+      es-define-property: 1.0.1
       side-channel: 1.1.1
 
   range-parser@1.2.1: {}
@@ -2880,7 +2799,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.4: {}
+  shell-quote@1.12.0: {}
 
   side-channel-list@1.0.1:
     dependencies:
@@ -3008,7 +2927,7 @@ snapshots:
 
   undici-types@7.18.2: {}
 
-  undici@6.26.0: {}
+  undici@7.30.2: {}
 
   unicode-canonical-property-names-ecmascript@2.0.1: {}
 
@@ -3055,20 +2974,20 @@ snapshots:
 
   ws@8.21.0: {}
 
-  xml-core@1.2.5(@xmldom/xmldom@0.8.13)(xpath@0.0.34):
+  xml-core@1.2.5(@xmldom/xmldom@0.8.15)(xpath@0.0.34):
     dependencies:
-      '@xmldom/xmldom': 0.8.13
+      '@xmldom/xmldom': 0.8.15
       tslib: 2.8.1
       xpath: 0.0.34
 
-  xmldsigjs@2.8.7(@xmldom/xmldom@0.8.13):
+  xmldsigjs@2.8.7(@xmldom/xmldom@0.8.15):
     dependencies:
       asn1js: 3.0.10
       pkijs: 3.4.0
       pvtsutils: 1.3.6
       pvutils: 1.1.5
       tslib: 2.8.1
-      xml-core: 1.2.5(@xmldom/xmldom@0.8.13)(xpath@0.0.34)
+      xml-core: 1.2.5(@xmldom/xmldom@0.8.15)(xpath@0.0.34)
       xpath: 0.0.34
     transitivePeerDependencies:
       - '@xmldom/xmldom'
@@ -3082,11 +3001,11 @@ snapshots:
       buffer-crc32: 0.2.13
       fd-slicer: 1.1.0
 
-  zod-to-json-schema@3.25.2(zod@4.4.3):
+  zod-to-json-schema@3.25.2(zod@4.6.7):
     dependencies:
-      zod: 4.4.3
+      zod: 4.6.7
 
-  zod@4.4.3: {}
+  zod@4.6.7: {}
 
   zustand-debounce@2.3.1(zustand@5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7)):
     dependencies:

@@ -14,7 +14,7 @@
     "typescript": "~5.9.3"
   },
   "dependencies": {
-    "hono": "^4.9.8",
+    "hono": "^4.13.17",
     "jose": "catalog:",
     "uqr": "^0.1.3"
   }

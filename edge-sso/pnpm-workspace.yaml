@@ -6,11 +6,11 @@ packages:
 # with the "catalog:" specifier instead of pinning their own version.
 catalog:
   "@gcoredev/fastedge-sdk-js": ^2.5.0
-  "@gcoredev/fastedge-test": ^0.2.4
+  "@gcoredev/fastedge-test": ^0.2.8
   "@peculiar/x509": ^1.14.3
   "@types/node": ^24.6.0
-  "@xmldom/xmldom": ^0.8.11
-  hono: ^4.9.8
+  "@xmldom/xmldom": ^0.8.15
+  hono: ^4.13.17
   jose: ^6.2.2
   npm-run-all2: ^9.0.1
   tsx: ^4.20.6
