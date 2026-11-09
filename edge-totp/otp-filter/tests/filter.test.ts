@@ -163,6 +163,31 @@ await suite(
       run: async (runner) => assertContinue(await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(validJwt) })),
     },
     {
+      name: "valid mfa_session stripped before origin, other cookies kept",
+      run: async (runner) => {
+        const r = await runFlow(runner, {
+          url: PROTECTED_URL,
+          requestHeaders: { cookie: `app_sid=abc; ${DEFAULT_COOKIE}=${validJwt}; theme=dark` },
+        });
+        assertContinue(r);
+        const sent = headerValue(r.hookResults.onRequestHeaders.output.request.headers["cookie"] as string | string[] | undefined);
+        if (sent !== "app_sid=abc; theme=dark") {
+          throw new Error(`expected cookie 'app_sid=abc; theme=dark', got ${JSON.stringify(sent)}`);
+        }
+      },
+    },
+    {
+      name: "only mfa_session cookie → cookie header cleared",
+      run: async (runner) => {
+        const r = await runFlow(runner, { url: PROTECTED_URL, requestHeaders: cookie(validJwt) });
+        assertContinue(r);
+        const sent = r.hookResults.onRequestHeaders.output.request.headers["cookie"];
+        if (sent !== undefined && sent !== "") {
+          throw new Error(`expected cookie cleared, got ${JSON.stringify(sent)}`);
+        }
+      },
+    },
+    {
       name: "no cookie → 302 to MFA_LOGIN_URL with relative-path redirect",
       run: async (runner) => {
         const r = await runFlow(runner, { url: PROTECTED_URL, requestHeaders: {} });

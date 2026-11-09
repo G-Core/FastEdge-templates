@@ -104,6 +104,19 @@ impl HttpContext for OtpGuard {
             claims.sub.as_deref().unwrap_or("<none>")
         );
 
+        // Strip the session cookie so the origin never sees the raw token.
+        let stripped = cookie_header
+            .split(';')
+            .map(str::trim)
+            .filter(|p| !p.starts_with(&format!("{cookie_name}=")))
+            .collect::<Vec<_>>()
+            .join("; ");
+        if stripped.is_empty() {
+            self.set_http_request_header("cookie", None);
+        } else {
+            self.set_http_request_header("cookie", Some(&stripped));
+        }
+
         Action::Continue
     }
 }
